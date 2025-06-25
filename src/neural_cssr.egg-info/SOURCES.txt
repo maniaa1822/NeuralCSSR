@@ -1,0 +1,13 @@
+pyproject.toml
+src/neural_cssr/__init__.py
+src/neural_cssr.egg-info/PKG-INFO
+src/neural_cssr.egg-info/SOURCES.txt
+src/neural_cssr.egg-info/dependency_links.txt
+src/neural_cssr.egg-info/requires.txt
+src/neural_cssr.egg-info/top_level.txt
+src/neural_cssr/core/__init__.py
+src/neural_cssr/core/epsilon_machine.py
+src/neural_cssr/data/__init__.py
+src/neural_cssr/data/dataset_generation.py
+src/neural_cssr/enumeration/__init__.py
+src/neural_cssr/enumeration/enumerate_machines.py

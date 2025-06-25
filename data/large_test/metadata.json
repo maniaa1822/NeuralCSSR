@@ -1,0 +1,19 @@
+{
+  "train_size": 28800,
+  "val_size": 3600,
+  "vocab_size": 2,
+  "alphabet": [
+    "0",
+    "1"
+  ],
+  "token_to_id": {
+    "0": 0,
+    "1": 1
+  },
+  "id_to_token": {
+    "0": "0",
+    "1": "1"
+  },
+  "max_history_length": 12,
+  "total_machines": 3
+}
