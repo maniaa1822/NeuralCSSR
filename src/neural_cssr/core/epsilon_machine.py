@@ -90,16 +90,7 @@ class EpsilonMachine:
         return dict(probs)
         
     def generate_sequence(self, length: int, start_state: Optional[str] = None) -> List[str]:
-        """
-        Generate a sequence from the epsilon machine.
-        
-        Args:
-            length: Length of sequence to generate
-            start_state: Starting state (uses machine's start_state if None)
-            
-        Returns:
-            Generated sequence of symbols
-        """
+        """Generate a sequence from the epsilon machine."""
         if not self.states:
             raise ValueError("Machine has no states")
             
@@ -107,27 +98,27 @@ class EpsilonMachine:
         sequence = []
         
         for _ in range(length):
-            # Get all possible emissions from current state
-            possible_emissions = []
+            # FIX: Get all outgoing transitions from current state
+            outgoing_transitions = []
             
             for symbol in self.alphabet:
                 key = (current, symbol)
-                if key in self.transitions:
-                    for next_state, prob in self.transitions[key]:
-                        possible_emissions.append((symbol, next_state, prob))
-                        
-            if not possible_emissions:
+                if key in self.transitions and self.transitions[key]:
+                    next_state, prob = self.transitions[key][0]  # Should be single transition
+                    outgoing_transitions.append((symbol, next_state, prob))
+                    
+            if not outgoing_transitions:
                 break
                 
-            # Sample emission based on probabilities
-            total_prob = sum(prob for _, _, prob in possible_emissions)
+            # Sample transition based on topological probabilities
+            total_prob = sum(prob for _, _, prob in outgoing_transitions)
             if total_prob == 0:
                 break
                 
             r = random.random() * total_prob
             cumulative = 0
             
-            for symbol, next_state, prob in possible_emissions:
+            for symbol, next_state, prob in outgoing_transitions:
                 cumulative += prob
                 if r <= cumulative:
                     sequence.append(symbol)
@@ -137,33 +128,20 @@ class EpsilonMachine:
         return sequence
         
     def compute_causal_state(self, history: List[str]) -> Optional[str]:
-        """
-        Compute the causal state for a given history by following transitions.
-        
-        Args:
-            history: Sequence of symbols representing the history
-            
-        Returns:
-            Causal state after processing the history, or None if invalid
-        """
+        """Compute the causal state for a given history."""
         if not history:
             return self.start_state
             
         current = self.start_state
         
         for symbol in history:
-            # Find transition from current state with this symbol
-            found_transition = False
-            
             key = (current, symbol)
-            if key in self.transitions:
-                # Take the most likely transition (or first if probabilities are equal)
-                next_state, _ = max(self.transitions[key], key=lambda x: x[1])
+            if key in self.transitions and self.transitions[key]:
+                # FIX: Should be deterministic - single transition
+                next_state, _ = self.transitions[key][0]
                 current = next_state
-                found_transition = True
-                
-            if not found_transition:
-                return None
+            else:
+                return None  # Invalid transition
                 
         return current
         

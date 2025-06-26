@@ -1,7 +1,6 @@
 from typing import List, Dict, Tuple, Optional
 import torch
 from torch.utils.data import Dataset, DataLoader
-import numpy as np
 from collections import defaultdict
 import random
 from ..core.epsilon_machine import EpsilonMachine
@@ -23,7 +22,8 @@ class EpsilonMachineDataset(Dataset):
                  sequences_per_machine: int = 100,
                  sequence_length: int = 50,
                  max_history_length: int = 20,
-                 complexity_range: Optional[Tuple[int, int]] = None):
+                 complexity_range: Optional[Tuple[int, int]] = None,
+                 use_variable_length: bool = False):
         """
         Initialize dataset from machine library.
         
@@ -33,11 +33,13 @@ class EpsilonMachineDataset(Dataset):
             sequence_length: Length of each generated sequence
             max_history_length: Maximum history length for training examples
             complexity_range: (min_states, max_states) to include
+            use_variable_length: If True, __getitem__ returns variable-length tensors
         """
         self.machine_library = machine_library
         self.sequences_per_machine = sequences_per_machine
         self.sequence_length = sequence_length
         self.max_history_length = max_history_length
+        self.use_variable_length = use_variable_length
         
         # Filter machines by complexity if specified
         if complexity_range:
@@ -96,8 +98,9 @@ class EpsilonMachineDataset(Dataset):
             history = sequence[start_pos:pos]
             target = sequence[pos]
             
-            # Compute ground truth causal state
-            causal_state = machine.compute_causal_state(sequence[:pos])
+            # FIX: Compute causal state from SAME history as transformer sees
+            # Instead of: causal_state = machine.compute_causal_state(sequence[:pos])
+            causal_state = machine.compute_causal_state(history)
             
             # Get emission probabilities
             if causal_state:
@@ -125,6 +128,37 @@ class EpsilonMachineDataset(Dataset):
             examples.append(example)
             
         return examples
+
+    def _create_examples_from_sequence_alternative(self, sequence: List[str], machine: EpsilonMachine,
+                                                 machine_id: int, properties: Dict, 
+                                                 sequence_id: int) -> List[Dict]:
+        """Alternative: Keep full causal state but add position info."""
+        examples = []
+        
+        for pos in range(1, len(sequence)):
+            start_pos = max(0, pos - self.max_history_length)
+            history = sequence[start_pos:pos]
+            target = sequence[pos]
+            
+            # Compute both full and truncated causal states
+            full_causal_state = machine.compute_causal_state(sequence[:pos])
+            truncated_causal_state = machine.compute_causal_state(history)
+            
+            example = {
+                'history': history,
+                'target': target,
+                'full_causal_state': full_causal_state or 'UNKNOWN',
+                'truncated_causal_state': truncated_causal_state or 'UNKNOWN',
+                'causal_state': truncated_causal_state or 'UNKNOWN',  # Use truncated for training
+                'machine_id': machine_id,
+                'sequence_id': sequence_id,
+                'position': pos,
+                'truncation_occurred': pos > self.max_history_length
+            }
+            
+            examples.append(example)
+            
+        return examples
         
     def __len__(self) -> int:
         return len(self.examples)
@@ -137,26 +171,41 @@ class EpsilonMachineDataset(Dataset):
         history_ids = [self.token_to_id[token] for token in example['history']]
         target_id = self.token_to_id[example['target']]
         
-        # Pad history to max length
-        if len(history_ids) < self.max_history_length:
-            # Pad with zeros (assuming 0 is padding token)
-            padding = [0] * (self.max_history_length - len(history_ids))
-            history_ids = padding + history_ids
-            attention_mask = [0] * len(padding) + [1] * len(history_ids[len(padding):])
+        if self.use_variable_length:
+            # Return variable-length tensors (no padding)
+            return {
+                'input_ids': torch.tensor(history_ids, dtype=torch.long),
+                'target_id': torch.tensor(target_id, dtype=torch.long),
+                'history_length': torch.tensor(len(history_ids), dtype=torch.long),
+                # Include other fields for compatibility
+                'target_prob': torch.tensor(example['target_prob'], dtype=torch.float),
+                'machine_id': torch.tensor(example['machine_id'], dtype=torch.long),
+                'num_states': torch.tensor(example['num_states'], dtype=torch.long),
+                'statistical_complexity': torch.tensor(example['statistical_complexity'], dtype=torch.float),
+                'entropy_rate': torch.tensor(example['entropy_rate'], dtype=torch.float),
+                'causal_state': example['causal_state'],
+            }
         else:
-            attention_mask = [1] * len(history_ids)
-            
-        # Convert emission probabilities to tensor
-        emission_tensor = torch.zeros(self.vocab_size)
-        for token, prob in example['emission_probs'].items():
-            if token in self.token_to_id:
-                emission_tensor[self.token_to_id[token]] = prob
+            # Original behavior: pad history to max length
+            if len(history_ids) < self.max_history_length:
+                # Pad with zeros (assuming 0 is padding token)
+                padding = [0] * (self.max_history_length - len(history_ids))
+                history_ids = padding + history_ids
+                attention_mask = [0] * len(padding) + [1] * len(history_ids[len(padding):])
+            else:
+                attention_mask = [1] * len(history_ids)
                 
-        return {
-            'input_ids': torch.tensor(history_ids, dtype=torch.long),
-            'attention_mask': torch.tensor(attention_mask, dtype=torch.long),
-            'target_id': torch.tensor(target_id, dtype=torch.long),
-            'target_prob': torch.tensor(example['target_prob'], dtype=torch.float),
+            # Convert emission probabilities to tensor
+            emission_tensor = torch.zeros(self.vocab_size)
+            for token, prob in example['emission_probs'].items():
+                if token in self.token_to_id:
+                    emission_tensor[self.token_to_id[token]] = prob
+                    
+            return {
+                'input_ids': torch.tensor(history_ids, dtype=torch.long),
+                'attention_mask': torch.tensor(attention_mask, dtype=torch.long),
+                'target_id': torch.tensor(target_id, dtype=torch.long),
+                'target_prob': torch.tensor(example['target_prob'], dtype=torch.float),
             'emission_probs': emission_tensor,
             'machine_id': torch.tensor(example['machine_id'], dtype=torch.long),
             'num_states': torch.tensor(example['num_states'], dtype=torch.long),

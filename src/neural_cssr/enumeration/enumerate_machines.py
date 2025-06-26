@@ -94,46 +94,43 @@ class MachineEnumerator:
             yield transitions
             
     def _create_machine_from_transitions(self, states: List[str], transitions: Dict) -> EpsilonMachine:
-        """
-        Create epsilon machine from transition structure.
-        
-        Args:
-            states: List of state names
-            transitions: Dictionary mapping (state, symbol) -> target_state
-            
-        Returns:
-            EpsilonMachine instance
-        """
+        """Create epsilon machine from transition structure."""
         machine = EpsilonMachine(self.alphabet)
         
         # Add all states
         for state in states:
             machine.add_state(state)
             
-        machine.start_state = states[0]  # Use first state as start state
+        machine.start_state = states[0]
         
-        # Add transitions with initial uniform probabilities
+        # FIX: Ensure each (state, symbol) has exactly ONE transition
         for (from_state, symbol), to_state in transitions.items():
-            machine.add_transition(from_state, symbol, to_state, 1.0)
+            # Clear any existing transitions for this (state, symbol) pair
+            key = (from_state, symbol)
+            machine.transitions[key] = [(to_state, 1.0)]  # Single deterministic transition
             
+        # Make topological (uniform probabilities per state)
+        machine.make_topological()
+        
         return machine
         
     def _is_valid_epsilon_machine(self, machine: EpsilonMachine) -> bool:
-        """
-        Check if a machine satisfies epsilon-machine properties.
+        """Check if a machine satisfies epsilon-machine properties."""
         
-        Args:
-            machine: Machine to validate
-            
-        Returns:
-            True if machine is a valid epsilon-machine
-        """
-        # Check if machine is strongly connected (all states reachable)
+        # Check deterministic property
+        for state in machine.states:
+            for symbol in machine.alphabet:
+                key = (state, symbol)
+                if key in machine.transitions:
+                    if len(machine.transitions[key]) != 1:
+                        return False  # Must have exactly one transition
+        
+        # Check strong connectivity
         if not self._is_strongly_connected(machine):
             return False
             
-        # Check if machine is deterministic (each (state, symbol) has unique transition)
-        if not self._is_deterministic(machine):
+        # Check topological property (uniform probabilities)
+        if not machine.is_topological():
             return False
             
         return True

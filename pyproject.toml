@@ -7,5 +7,7 @@ dependencies = [
     "torch",
     "numpy", 
     "pyyaml",
-    "scipy"
+    "scipy",
+    "tqdm",
+    "scikit-learn"
 ]

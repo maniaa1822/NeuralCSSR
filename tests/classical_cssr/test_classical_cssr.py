@@ -18,7 +18,7 @@ def main():
     try:
         # Load the raw data format
         try:
-            dataset_dict = torch.load('data/large_test/train_dataset.pt', weights_only=False)
+            dataset_dict = torch.load('/home/matteo/NeuralCSSR/data/large_test/train_dataset.pt', weights_only=False)
             if isinstance(dataset_dict, dict) and 'data' in dataset_dict:
                 # New format - raw data
                 train_data = dataset_dict['data']
@@ -45,7 +45,7 @@ def main():
         print(f"Vocabulary: {metadata['alphabet']}")
         
         # Also load metadata for context
-        with open('data/large_test/metadata.json', 'r') as f:
+        with open('/home/matteo/NeuralCSSR/data/large_test/metadata.json', 'r') as f:
             metadata = json.load(f)
         print(f"Dataset covers {metadata['total_machines']} machines")
         print(f"Alphabet: {metadata['alphabet']}")
@@ -114,7 +114,7 @@ def main():
     print("="*50)
     
     # Save results
-    results_file = 'data/large_test/classical_cssr_results.json'
+    results_file = '/home/matteo/NeuralCSSR/data/large_test/classical_cssr_results.json'
     with open(results_file, 'w') as f:
         json.dump({
             'cssr_results': results,

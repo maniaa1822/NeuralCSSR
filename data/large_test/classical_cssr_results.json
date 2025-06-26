@@ -1,175 +1,160 @@
 {
   "cssr_results": {
-    "num_causal_states": 10,
-    "total_histories_assigned": 5141,
-    "total_histories_observed": 6564,
-    "coverage": 0.7832114564290067,
+    "algorithm": "Empirical CSSR",
+    "num_causal_states": 9,
+    "total_histories_assigned": 5089,
+    "total_histories_observed": 6549,
+    "coverage": 0.7770652007940143,
     "causal_states": [
       {
         "state_id": 0,
-        "num_histories": 1312,
-        "total_observations": 10404,
+        "num_histories": 1257,
+        "total_observations": 9837,
         "next_symbol_distribution": {
-          "0": 0.49663590926566703,
-          "1": 0.503364090734333
+          "0": 0.5003557995323777,
+          "1": 0.49964420046762226
         },
         "sample_histories": [
-          "011101000000",
-          "101001111100",
-          "011001011100",
-          "110010000110",
-          "011110010101"
+          "111110001001",
+          "100111111110",
+          "001000010101",
+          "1100101011",
+          "11101010110"
         ]
       },
       {
         "state_id": 1,
-        "num_histories": 398,
-        "total_observations": 2635,
+        "num_histories": 962,
+        "total_observations": 5459,
         "next_symbol_distribution": {
-          "0": 0.3954459203036053,
-          "1": 0.6045540796963947
+          "1": 0.6349148195640227,
+          "0": 0.36508518043597726
         },
         "sample_histories": [
-          "111101111100",
-          "001001111010",
-          "111011011001",
-          "01011010",
-          "010001000011"
+          "111110000111",
+          "011001011010",
+          "111001111101",
+          "100011110000",
+          "110001101101"
         ]
       },
       {
         "state_id": 2,
-        "num_histories": 893,
-        "total_observations": 4564,
+        "num_histories": 515,
+        "total_observations": 3093,
         "next_symbol_distribution": {
-          "0": 0.6277388255915863,
-          "1": 0.37226117440841366
+          "0": 0.7381183317167799,
+          "1": 0.2618816682832202
         },
         "sample_histories": [
-          "011001101010",
-          "100000000110",
-          "011011101100",
-          "111111101",
-          "001000010111"
+          "100101101101",
+          "0101000",
+          "00001110",
+          "0101100011",
+          "101111011110"
         ]
       },
       {
         "state_id": 3,
-        "num_histories": 428,
-        "total_observations": 2077,
+        "num_histories": 836,
+        "total_observations": 3820,
         "next_symbol_distribution": {
-          "0": 0.7496389022628791,
-          "1": 0.25036109773712084
+          "0": 0.6301047120418848,
+          "1": 0.36989528795811516
         },
         "sample_histories": [
-          "110010011001",
-          "10101101",
-          "110010111110",
-          "010010010000",
-          "100100100011"
+          "111110001101",
+          "000101011010",
+          "100000000100",
+          "000110111111",
+          "011111111011"
         ]
       },
       {
         "state_id": 4,
-        "num_histories": 74,
-        "total_observations": 507,
+        "num_histories": 390,
+        "total_observations": 1877,
         "next_symbol_distribution": {
-          "1": 0.17357001972386588,
-          "0": 0.8264299802761341
+          "1": 0.7757059136920618,
+          "0": 0.2242940863079382
         },
         "sample_histories": [
-          "010110001100",
-          "0111010",
-          "100011000011",
-          "100000100110",
-          "1011101"
+          "00111001000",
+          "111100101100",
+          "1111110101",
+          "1011000010",
+          "101000011"
         ]
       },
       {
         "state_id": 5,
-        "num_histories": 518,
-        "total_observations": 2241,
+        "num_histories": 24,
+        "total_observations": 183,
         "next_symbol_distribution": {
-          "1": 0.6778224007139669,
-          "0": 0.322177599286033
+          "0": 0.8633879781420765,
+          "1": 0.1366120218579235
         },
         "sample_histories": [
-          "000001101010",
-          "001011111010",
-          "001100000111",
-          "011000001101",
-          "101111001001"
+          "110111001100",
+          "111110101101",
+          "010110001101",
+          "000100111100",
+          "001011001100"
         ]
       },
       {
         "state_id": 6,
-        "num_histories": 396,
-        "total_observations": 1851,
+        "num_histories": 24,
+        "total_observations": 174,
         "next_symbol_distribution": {
-          "0": 0.22798487304159915,
-          "1": 0.7720151269584009
+          "1": 0.8620689655172413,
+          "0": 0.13793103448275862
         },
         "sample_histories": [
-          "101011101000",
-          "110101110110",
-          "000100001011",
-          "001111110010",
-          "01101111"
+          "111110000011",
+          "011011011010",
+          "10000100",
+          "101111101000",
+          "001101101010"
         ]
       },
       {
         "state_id": 7,
-        "num_histories": 25,
-        "total_observations": 188,
-        "next_symbol_distribution": {
-          "1": 0.8457446808510638,
-          "0": 0.15425531914893617
-        },
-        "sample_histories": [
-          "010110011101",
-          "110001",
-          "000001100101",
-          "110101111011",
-          "0110001"
-        ]
-      },
-      {
-        "state_id": 8,
-        "num_histories": 557,
-        "total_observations": 1445,
+        "num_histories": 532,
+        "total_observations": 1426,
         "next_symbol_distribution": {
           "0": 1.0
         },
         "sample_histories": [
-          "01111111",
-          "110010000100",
-          "1111010010",
-          "110000100",
-          "10001111100"
+          "101010101100",
+          "010011001101",
+          "100010111001",
+          "111011111110",
+          "001000101"
         ]
       },
       {
-        "state_id": 9,
-        "num_histories": 540,
-        "total_observations": 1465,
+        "state_id": 8,
+        "num_histories": 549,
+        "total_observations": 1471,
         "next_symbol_distribution": {
           "1": 1.0
         },
         "sample_histories": [
-          "011010110010",
-          "111011011",
-          "001000011101",
-          "01111111001",
-          "110110110110"
+          "101100011111",
+          "010111000001",
+          "001100000",
+          "001100000101",
+          "010111011101"
         ]
       }
     ]
   },
   "evaluation": {
-    "accuracy": 0.6593291404612159,
-    "num_states_discovered": 10,
-    "coverage": 0.7832114564290067,
-    "predictions_made": 954
+    "accuracy": 0.6407563025210085,
+    "num_states_discovered": 9,
+    "coverage": 0.7770652007940143,
+    "predictions_made": 952
   },
   "converged": true,
   "parameters": {
