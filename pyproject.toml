@@ -9,5 +9,7 @@ dependencies = [
     "pyyaml",
     "scipy",
     "tqdm",
-    "scikit-learn"
+    "scikit-learn",
+    "matplotlib",
+    "seaborn"
 ]
