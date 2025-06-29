@@ -1,0 +1,62 @@
+experiment_name: biased_neural_cssr_experiment
+machine_specs:
+- bias_strength: 0.0
+  complexity_class: 2-state-binary
+  custom_probabilities: null
+  machine_count: 2
+  probability_seed: null
+  samples_per_machine: 1000
+  topological: true
+  weight: 1.0
+- bias_strength: 0.7
+  complexity_class: 2-state-binary
+  custom_probabilities: null
+  machine_count: 3
+  probability_seed: 123
+  samples_per_machine: 1000
+  topological: false
+  weight: 1.2
+- bias_strength: 0.0
+  complexity_class: 3-state-binary
+  custom_probabilities:
+    S0:
+      '0': 0.8
+      '1': 0.2
+    S1:
+      '0': 0.3
+      '1': 0.7
+    S2:
+      '0': 0.5
+      '1': 0.5
+  machine_count: 1
+  probability_seed: null
+  samples_per_machine: 1500
+  topological: false
+  weight: 1.5
+neural_format_config:
+  batch_friendly_padding: true
+  context_length: 256
+  include_position_metadata: true
+  vocab_special_tokens:
+  - <PAD>
+  - <UNK>
+output_config:
+  compress_outputs: false
+  save_neural_format: true
+  save_quality_reports: true
+  save_raw_sequences: true
+  save_statistical_analysis: true
+quality_spec:
+  entropy_tolerance: 0.1
+  length_diversity_threshold: 0.3
+  min_state_coverage: 50
+  min_transition_coverage: 25
+random_seed: 42
+sequence_spec:
+  length_distribution:
+  - 30
+  - 150
+  test_ratio: 0.15
+  total_sequences: 6500
+  train_ratio: 0.7
+  val_ratio: 0.15

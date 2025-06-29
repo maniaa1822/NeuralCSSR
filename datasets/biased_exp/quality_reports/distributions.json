@@ -1,0 +1,44 @@
+{
+  "overall_score": 0.9999986906142379,
+  "issues": [],
+  "entropy_validation": {
+    "score": 0.9999960718427137,
+    "issues": [],
+    "comparisons": {
+      "0": {
+        "theoretical": 1.0,
+        "empirical": 0.999997240778304,
+        "relative_error": 2.759221696013725e-06
+      },
+      "1": {
+        "theoretical": 1.0,
+        "empirical": 0.9999949029071235,
+        "relative_error": 5.097092876549247e-06
+      }
+    },
+    "mean_consistency": 0.9999960718427137
+  },
+  "symbol_validation": {
+    "score": 1.0,
+    "issues": [],
+    "symbol_frequencies": {
+      "1": 0.5001290344633106,
+      "0": 0.49987096553668936
+    },
+    "expected_frequency": 0.5,
+    "balance_score": 1.0
+  },
+  "machine_validation": {
+    "score": 1.0,
+    "issues": [],
+    "machine_counts": {
+      "0": 3500,
+      "1": 3000
+    },
+    "machine_frequencies": {
+      "0": 0.5384615384615384,
+      "1": 0.46153846153846156
+    },
+    "balance_score": 1.0
+  }
+}

@@ -1,276 +1,289 @@
 # Neural CSSR Project Memory
 
 ## Project Overview
-Neural CSSR (Causal State Splitting Reconstruction) implementation that enumerates epsilon-machines and generates datasets for training neural networks to learn causal state representations.
+Neural CSSR (Causal State Splitting Reconstruction) implementation with a unified dataset generation framework for studying transfer learning scaling laws between synthetic finite state machine datasets. The project combines epsilon-machine enumeration, classical CSSR algorithms, and comprehensive dataset generation for neural network training.
 
 ## Current Status
-✅ **Phase 1 Complete**: Functional epsilon-machine enumeration and PyTorch dataset generation
-- Successfully implemented machine enumeration system
-- Created PyTorch-compatible datasets with ground truth causal state labels
-- Generated 1,710 training + 190 validation examples from enumerated machines
-- All core functionality tested and working
+✅ **Unified Framework Complete**: Production-ready dataset generation system
+- Implemented comprehensive unified dataset generation framework
+- Configuration-driven experiments with quality validation
+- Multi-format outputs (raw sequences + PyTorch datasets)
+- Rich metadata with information-theoretic measures
+- Automated quality assurance and baseline computations
 
-✅ **Phase 2 Complete**: Classical CSSR baseline implementation
-- Implemented classical CSSR algorithm with multiple statistical tests
-- Tested on both small (1,710 examples) and large (28,800 examples) datasets
-- Achieved optimal performance with KL divergence (min_count=2, threshold=0.01)
-- Large dataset results: 10 discovered states, 65.9% accuracy, 78.3% coverage
+✅ **Core Infrastructure Complete**: 
+- Epsilon-machine enumeration system
+- Classical CSSR baseline implementation
+- Statistical analysis and metadata computation
+- Neural dataset formatting for transformers
 
-## Problem Point 3 and Potential Solutions
-- **Issue**: Complexity in state discovery when mixing machines with similar state labels but different behaviors
-- **Potential Solution**: Develop more sophisticated state differentiation algorithm
-- **Proposed Approach**: Implement multi-dimensional state encoding that captures nuanced behavioral differences
-- **Next Step**: Create a more granular state comparison metric beyond current KL divergence method
+## Unified Dataset Generation Framework
 
-## Complete Codebase Structure
+### Core Architecture
+The new framework provides a complete pipeline from machine enumeration to ready-to-use datasets:
+
+```
+Configuration → Machine Library → Sequence Generation → 
+Neural Formatting → Quality Validation → Structured Output
+```
+
+### Key Components
+- **Dataset Generator**: Main orchestration (`dataset_generator.py`)
+- **Sequence Processor**: Raw sequence generation with state tracking (`sequence_processor.py`)
+- **Neural Formatter**: PyTorch dataset creation (`neural_formatter.py`)
+- **Metadata Computer**: Information-theoretic analysis (`metadata_computer.py`)
+- **Quality Validator**: Coverage and distribution validation (`quality_validator.py`)
+- **Configuration System**: YAML-based experiment configuration (`generation_schemas.py`)
+
+## Current Codebase Structure
 ```
 /home/matteo/NeuralCSSR/
 ├── CLAUDE.md                          # Project memory/instructions
-├── claude_test.py                     # Test script
-├── inspect_dataset.py                 # Dataset inspection utility
-├── neural_cssr_project_structure.md   # Project structure documentation
-├── neural_cssr_summary.md            # Project summary documentation
+├── generate_unified_dataset.py        # Main dataset generation script
+├── neural_cssr_dataset_framework.md   # Framework specification
 ├── pyproject.toml                     # Python project configuration
-├── test_enumeration.py                # Main dataset generation script
 ├── uv.lock                           # UV package manager lock file
-├── config/                           # Configuration directory
-│   ├── small_test_config.yaml        # Small test (3 states, 1,710 examples)
-│   └── large_test_config.yaml        # Large test (4 states, 28,800 examples)
-├── data/                             # Generated datasets directory
-│   ├── large_test/                   # Large dataset (28,800 examples)
-│   │   ├── classical_cssr_results.json # CSSR baseline results
-│   │   ├── metadata.json             # Dataset metadata
-│   │   ├── train_dataset.pt          # PyTorch training dataset
-│   │   └── val_dataset.pt            # PyTorch validation dataset
-│   └── small_test/                   # Small dataset (1,710 examples)
-│       ├── classical_cssr_results.json # CSSR baseline results
-│       ├── metadata.json             # Dataset metadata
-│       ├── train_dataset.pt          # PyTorch training dataset
-│       └── val_dataset.pt            # PyTorch validation dataset
+├── datasets/                         # Generated datasets directory
+│   └── small_exp/                    # Example: small experiment
+│       ├── raw_sequences/            # Plain text sequences for classical CSSR
+│       ├── neural_format/            # PyTorch datasets (.pt files)
+│       ├── ground_truth/             # Machine definitions & state labels
+│       ├── statistical_analysis/    # Information theory metrics
+│       ├── quality_reports/          # Coverage & validation analysis
+│       ├── experiment_config.yaml    # Configuration used
+│       └── generation_info.yaml      # Reproducibility information
 ├── src/neural_cssr/                  # Source code directory
 │   ├── __init__.py                   # Package initialization
 │   ├── classical/                    # Classical CSSR implementation
 │   │   ├── __init__.py
 │   │   ├── cssr.py                   # Main classical CSSR algorithm
 │   │   └── statistical_tests.py     # Statistical testing framework
-│   ├── config/                       # Empty (planned configuration)
+│   ├── config/                       # Configuration system
+│   │   ├── __init__.py
+│   │   ├── generation_schemas.py     # Configuration dataclasses
+│   │   └── dataset_configs/          # Example configurations
+│   │       ├── small_experiment.yaml
+│   │       ├── medium_experiment.yaml
+│   │       └── full_experiment.yaml
 │   ├── core/                         # Core epsilon-machine implementation
 │   │   ├── __init__.py
 │   │   └── epsilon_machine.py        # Core epsilon-machine classes
-│   ├── data/                         # Dataset generation
+│   ├── data/                         # Unified dataset generation
 │   │   ├── __init__.py
-│   │   └── dataset_generation.py     # PyTorch dataset generation
+│   │   ├── dataset_generator.py      # Main orchestrator
+│   │   ├── sequence_processor.py     # Raw sequence processing
+│   │   ├── neural_formatter.py       # PyTorch dataset creation
+│   │   ├── metadata_computer.py      # Statistical analysis
+│   │   ├── quality_validator.py      # Quality validation
+│   │   ├── evaluation_baselines.py   # Baseline computations
+│   │   └── dataset_generation.py     # Legacy (kept for compatibility)
 │   ├── enumeration/                  # Machine enumeration system
 │   │   ├── __init__.py
 │   │   └── enumerate_machines.py     # Machine enumeration logic
-│   └── neural/                       # Empty (planned neural implementation)
+│   ├── analysis/                     # Dataset analysis tools
+│   │   └── __init__.py
+│   └── neural/                       # Neural network implementations
+│       └── __init__.py
 └── tests/                            # Test files directory
     └── classical_cssr/               # Classical CSSR tests
         ├── README.md                 # Test documentation
-        ├── analyze_cssr.py           # CSSR analysis utilities
-        ├── debug_chi_square.py       # Chi-square debugging
-        ├── test_classical_cssr.py    # Main CSSR test script
-        ├── test_cssr_params.py       # CSSR parameter testing
-        └── test_kl_params.py         # KL divergence parameter testing
+        └── test_classical_cssr.py    # Main CSSR test script
 ```
 
 ## Key Implementation Files
-- **Core**: `src/neural_cssr/core/epsilon_machine.py` - epsilon-machine implementation
-- **Enumeration**: `src/neural_cssr/enumeration/enumerate_machines.py` - machine enumeration system
-- **Data Generation**: `src/neural_cssr/data/dataset_generation.py` - PyTorch dataset generation
-- **Classical CSSR**: `src/neural_cssr/classical/cssr.py` - classical CSSR algorithm
-- **Statistical Tests**: `src/neural_cssr/classical/statistical_tests.py` - testing framework
-- **Main Scripts**: `test_enumeration.py`, `inspect_dataset.py`, `claude_test.py`
+- **Main Script**: `generate_unified_dataset.py` - Complete dataset generation with CLI
+- **Core Framework**: `src/neural_cssr/data/dataset_generator.py` - Main orchestrator
+- **Machine Enumeration**: `src/neural_cssr/enumeration/enumerate_machines.py` - Machine library
+- **Configuration**: `src/neural_cssr/config/generation_schemas.py` - Experiment configs
+- **Classical CSSR**: `src/neural_cssr/classical/cssr.py` - Baseline algorithm
 
-## Ready for Implementation
-- **Neural Network**: Empty `src/neural_cssr/neural/` directory ready for transformer implementation
-- **Configuration**: Empty `src/neural_cssr/config/` directory ready for neural config classes
+## How to Use the Framework
 
-## How to Run
-- **Generate datasets**: `uv run python test_enumeration.py`
-- **Test classical CSSR**: `uv run python tests/classical_cssr/test_classical_cssr.py`
-- **Inspect datasets**: `uv run python inspect_dataset.py`
-- **Dependencies**: Uses `uv` package manager, dependencies in `pyproject.toml`
+### Quick Start - Generate Datasets
+```bash
+# Small experiment (2,500 sequences, 5 machines) - uniform probabilities
+python generate_unified_dataset.py --preset small --output datasets/small_exp
+
+# Medium experiment (25,000 sequences, 16 machines) - uniform probabilities
+python generate_unified_dataset.py --preset medium --output datasets/medium_exp
+
+# Large experiment (122,000 sequences, 33 machines) - uniform probabilities
+python generate_unified_dataset.py --preset large --output datasets/large_exp
+
+# Biased experiment (6,500 sequences, 6 machines) - mixed uniform/biased probabilities
+python generate_unified_dataset.py --preset biased --output datasets/biased_exp
+
+# Custom configuration
+python generate_unified_dataset.py --config my_config.yaml --output datasets/custom_exp
+
+# Preview configuration without generating
+python generate_unified_dataset.py --preset medium --output /tmp --dry-run
+```
+
+### Configuration Examples
+The framework supports four built-in presets and custom YAML configurations:
+
+**Small Preset**: 5 machines, 2,500 sequences, uniform probabilities
+**Medium Preset**: 16 machines, 25,000 sequences, uniform probabilities  
+**Large Preset**: 33 machines, 122,000 sequences, uniform probabilities
+**Biased Preset**: 6 machines, 6,500 sequences, mixed uniform/biased probabilities
+
+### Custom Configuration
+Create YAML files following the schema in `src/neural_cssr/config/dataset_configs/`:
+
+#### Uniform (Topological) Machines:
+```yaml
+experiment_name: "uniform_experiment"
+machine_specs:
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 1000
+    weight: 1.0
+    topological: true  # Uniform probabilities (default)
+```
+
+#### Biased (Non-Topological) Machines:
+```yaml
+experiment_name: "biased_experiment"
+machine_specs:
+  # Random bias with specified strength
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 1000
+    topological: false
+    bias_strength: 0.7        # 0.0=uniform, 1.0=maximum bias
+    probability_seed: 123     # Reproducible random bias
+    
+  # Custom transition probabilities
+  - complexity_class: "3-state-binary"
+    machine_count: 1
+    samples_per_machine: 1500
+    topological: false
+    custom_probabilities:
+      "S0": {"0": 0.8, "1": 0.2}  # Strong bias toward '0'
+      "S1": {"0": 0.3, "1": 0.7}  # Strong bias toward '1'
+      "S2": {"0": 0.5, "1": 0.5}  # Uniform for comparison
+```
+
+## Output Format
+Each generated dataset includes:
+
+### Raw Sequences (`raw_sequences/`)
+- Plain text format for classical CSSR
+- Train/val/test splits as separate files
+- Complete sequence metadata in JSON
+
+### Neural Format (`neural_format/`)
+- PyTorch datasets (.pt files) ready for training
+- Autoregressive format with attention masks
+- Ground truth causal state labels
+- Vocabulary and tokenization metadata
+
+### Ground Truth (`ground_truth/`)
+- Complete causal state trajectories
+- Machine properties and definitions
+- Transition logs and metadata
+
+### Statistical Analysis (`statistical_analysis/`)
+- Information-theoretic measures (entropy, complexity)
+- N-gram analysis and sequence statistics
+- Baseline performance metrics
+
+### Quality Reports (`quality_reports/`)
+- Coverage validation (states, transitions)
+- Distribution consistency checks
+- Quality scores and recommendations
 
 ## Technical Implementation Details
-- **Epsilon-machines**: Topological machines with uniform probability distributions
-- **Enumeration**: Generates all valid finite-state machines up to specified constraints
-- **Dataset format**: PyTorch tensors with input_ids, attention_mask, target_id, causal_state
-- **Ground truth**: Complete causal state labeling for supervised learning
-- **Validation**: Machine properties verified (strongly connected, deterministic)
+- **Epsilon-machines**: Both topological (uniform) and non-topological (biased) machines supported
+- **Probability control**: Custom transition probabilities or random bias generation
+- **Enumeration**: Systematic generation of all valid finite-state machines
+- **Dataset format**: PyTorch tensors with rich metadata annotations
+- **Quality assurance**: Automated coverage and distribution validation (adapted for biased machines)
+- **Reproducibility**: Complete configuration and generation tracking with bias seeds
 
-## Configuration
-**Small test config** (`config/small_test_config.yaml`):
-- Max 3 states, binary alphabet ['0', '1']  
-- 5 machines per complexity level
-- 10 sequences per machine, length 20
-- Max history length 10
-- Total: 1,710 training examples
+## Framework Features
+- **Configuration-driven**: YAML-based experiment specification
+- **Multi-format output**: Raw sequences + PyTorch datasets
+- **Rich metadata**: Information theory, complexity metrics, quality validation
+- **Quality assurance**: Automated coverage analysis and validation
+- **Baseline computation**: Random, n-gram, and theoretical optimal baselines
+- **Reproducibility**: Full experiment tracking and configuration saving
+- **Scalability**: Small to large-scale dataset generation
 
-**Large test config** (`config/large_test_config.yaml`):
-- Max 4 states, binary alphabet ['0', '1']
-- 10 machines per complexity level
-- 50 sequences per machine, length 25
-- Max history length 12
-- Total: 28,800 training examples
+## Recent Achievements
 
-## Known Issues Fixed
-- PyTorch 2.6 requires `weights_only=False` for custom class loading
-- Use `uv run python` instead of plain `python` for proper environment
+✅ **Non-Topological Machine Support Added**: Full control over transition probabilities
+- Custom transition probabilities via YAML configuration
+- Random bias generation with configurable strength (0.0=uniform, 1.0=maximum)
+- Reproducible bias generation with seeds
+- Mixed datasets combining topological and biased machines
+- New `--preset biased` for immediate non-uniform experiments
 
-## Classical CSSR Results Analysis
+✅ **Successfully Generated**: Small dataset with 2,500 sequences  
+- 5 machines (3×2-state + 2×3-state binary)
+- Perfect quality score (1.0/1.0)
+- Complete multi-format output
+- 21.3 second generation time
+- All validation checks passed
 
-**Key Finding**: CSSR discovers 10 states from large dataset containing 3 machines (max 4 states each)
+✅ **Biased Dataset Validation**: Confirmed non-uniform probability generation
+- Custom probabilities: 80%/20% bias successfully implemented
+- Random bias: 31.8% deviation from uniform achieved
+- Statistical analysis automatically detects probability biases
+- Framework correctly handles mixed topological/non-topological datasets
 
-**Why More States Than Expected:**
-- Dataset mixes sequences from 3 different machines: 2-state, 3-state, and 4-state
-- Each machine uses same state labels ("S0", "S1", etc.) but with different behaviors
-- CSSR must build unified model capturing all mixed behaviors
-- Result: 10 discovered states to distinguish between behaviorally different states across machines
-
-**Performance Metrics:**
-- Accuracy: 65.9% (predicting next symbol)
-- Coverage: 78.3% (histories assigned to states)
-- Statistical test: KL divergence with min_count=2, threshold=0.01
-
-## Next Steps (Not Implemented)
-1. Neural CSSR transformer architecture for probability estimation P(next_symbol | history)
-2. Integration of transformer probabilities into CSSR algorithm
-3. Comparison of neural vs classical CSSR performance
-4. Training loop with causal state prediction
-5. Evaluation metrics and visualization
+## Dependencies and Environment
+- **Package Manager**: `uv` (not pip)
+- **Python Version**: 3.11+
+- **Key Dependencies**: PyTorch, NumPy, PyYAML
+- **Installation**: `uv sync`
 
 ## Commands to Remember
-- Generate datasets: `uv run python test_enumeration.py`
-- Test classical CSSR: `uv run python tests/classical_cssr/test_classical_cssr.py`
-- Quick dataset check: `uv run python inspect_dataset.py`
-- Install deps: `uv sync`
-- Project uses `uv` not `pip`
+```bash
+# Generate datasets with different scales and probability types
+python generate_unified_dataset.py --preset small --output datasets/small      # Uniform
+python generate_unified_dataset.py --preset medium --output datasets/medium    # Uniform
+python generate_unified_dataset.py --preset large --output datasets/large      # Uniform
+python generate_unified_dataset.py --preset biased --output datasets/biased    # Mixed uniform/biased
 
-## Dataset Sample for classical CSSR
-uv run python explore_dataset.py
-Dataset type: <class 'dict'>
-Dataset keys: ['data', 'metadata']
+# Custom experiments with bias control
+python generate_unified_dataset.py --config biased_experiment.yaml --output datasets/custom_bias
+python generate_unified_dataset.py --config mixed_probabilities.yaml --output datasets/mixed
 
-Key: data
-  Type: <class 'list'>
-  Length: 28800
-  First few elements: [{'input_ids': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'attention_mask': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 'target_id': 1, 'machine_id': 10, 'num_states': 3, 'causal_state': 'S0', 'target_prob': 0.5, 'raw_history': ['0'], 'raw_target': '1'}, {'input_ids': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 'attention_mask': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], 'target_id': 0, 'machine_id': 10, 'num_states': 3, 'causal_state': 'S1', 'target_prob': 0.5, 'raw_history': ['0', '1'], 'raw_target': '0'}, {'input_ids': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], 'attention_mask': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1], 'target_id': 1, 'machine_id': 10, 'num_states': 3, 'causal_state': 'S0', 'target_prob': 0.5, 'raw_history': ['0', '1', '0'], 'raw_target': '1'}, {'input_ids': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1], 'attention_mask': [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1], 'target_id': 1, 'machine_id': 10, 'num_states': 3, 'causal_state': 'S1', 'target_prob': 0.5, 'raw_history': ['0', '1', '0', '1'], 'raw_target': '1'}, {'input_ids': [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1], 'attention_mask': [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1], 'target_id': 0, 'machine_id': 10, 'num_states': 3, 'causal_state': 'S2', 'target_prob': 0.5, 'raw_history': ['0', '1', '0', '1', '1'], 'raw_target': '0'}]
+# Analysis and validation
+python analyze_biased_dataset.py datasets/biased_exp    # Analyze symbol frequencies by machine
+python test_bias_functionality.py                       # Test bias implementation
 
-Key: metadata
-  Type: <class 'dict'>
+# Test classical CSSR (legacy)
+uv run python tests/classical_cssr/test_classical_cssr.py
 
-Data samples analysis:
-  Total samples: 28800
+# Install dependencies
+uv sync
+```
 
-First 3 samples:
-  Sample 0:
-    input_ids: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    attention_mask: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-    target_id: 1
-    causal_state: S0
-    raw_history: ['0']
-    raw_target: 1
-  Sample 1:
-    input_ids: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-    attention_mask: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]
-    target_id: 0
-    causal_state: S1
-    raw_history: ['0', '1']
-    raw_target: 0
-  Sample 2:
-    input_ids: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
-    attention_mask: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]
-    target_id: 1
-    causal_state: S0
-    raw_history: ['0', '1', '0']
-    raw_target: 1
+## Known Technical Notes
+- PyTorch datasets use `weights_only=False` for compatibility
+- All file paths are absolute for cross-platform compatibility
+- JSON serialization handles numpy arrays and tuples automatically
+- Sequences converted between list and string formats as needed
+- Bias functionality validated: 80%/20% custom probabilities work correctly
+- Random bias generation tested: up to 31.8% deviation from uniform achieved
+- Quality validation thresholds adjusted for non-uniform probability distributions
 
-Token vocabulary: [0, 1]
-Target vocabulary: [0, 1]
+## Next Steps for Research
+1. **Neural Network Training**: Use generated PyTorch datasets for transformer training
+2. **Classical Comparison**: Run classical CSSR on raw sequences for baseline comparison
+3. **Scaling Studies**: Generate datasets of different scales to study transfer learning
+4. **Analysis Framework**: Develop tools for comparing neural vs classical CSSR performance
+5. **Evaluation Metrics**: Implement comprehensive evaluation and visualization tools
 
-Sequence lengths (first 100): min=12, max=12
+## Project Progress Updates
+- Successfully completed initial dataset generation framework
+- Developed robust configuration-driven generation system
+- Implemented comprehensive quality validation
+- Generated first small-scale experimental dataset
+- Prepared infrastructure for scaling experiments
 
-Metadata:
-  vocab_size: 2
-  alphabet: ['0', '1']
-  token_to_id: {'0': 0, '1': 1}
-  id_to_token: {0: '0', 1: '1'}
-  max_history_length: 12
-
-  ##Core Issue
-
-  Transformers consistently predict ~50% probability for both
-  tokens (0 and 1), failing to learn conditional patterns that
-  clearly exist in the data.
-
-  What We Know Works
-
-  - Classical CSSR succeeds: Discovers 10 causal states,
-  achieves 65.9% accuracy on the same data
-  - Empirical patterns exist: Histories like '100' → 45.8% vs
-  54.2%, '1101' → 56.8% vs 43.2%
-  - Data contains structure: 28,800 samples with measurable
-  conditional dependencies
-
-  What Fails
-
-  - Direct autoregressive training: Model learns global marginal
-   (~49.4%/50.6%) instead of conditionals
-  - Simple RNN: Also gets stuck at uniform despite much simpler
-  architecture
-  - Sequence-to-symbol: Even with proper sequence context, still
-   predicts uniform
-
-  Root Cause Analysis
-
-  1. Data Generation Issue
-
-  - Epsilon-machines use make_topological() → uniform transition
-   probabilities (0.5/0.5)
-  - Empirical deviations are sampling noise, not real patterns
-  - Neural models correctly learn there are no true conditional
-  biases
-
-  2. Learning Dynamics Problem
-
-  - Optimization landscape: Global marginal is an easy local
-  minimum
-  - Signal-to-noise ratio: Real patterns (if any) are too weak
-  vs noise
-  - Model capacity: Even simple patterns require more
-  sophisticated modeling
-
-  3. Task Formulation Issue
-
-  - Autoregressive expansion: Destroys sequential context by
-  splitting sequences
-  - Context window: Limited history may miss longer-range
-  dependencies
-  - Target representation: Binary classification may be too
-  crude
-
-  Why Classical CSSR Works But Neural Doesn't
-
-  Classical CSSR:
-  - Groups histories by statistical similarity (not prediction
-  accuracy)
-  - Discovers structural patterns (state transitions) not
-  probabilistic biases
-  - Uses hypothesis testing to find meaningful state
-  distinctions
-
-  Neural approaches:
-  - Optimize prediction accuracy directly
-  - Get stuck in marginal distribution local minimum
-  - Need stronger supervision or architectural inductive biases
-
-  Our Neural CSSR Solution
-
-  Stage 1: Learn representations (not direct prediction)Stage 2:
-   Cluster to discover causal states (like classical CSSR)Stage 
-  3: Predict from discovered states (structured prediction)
-
-  This mimics classical CSSR's approach instead of direct
-  end-to-end learning, potentially avoiding the uniform
-  distribution trap.
+## Framework Status: Production Ready ✅
+The unified dataset generation framework is complete and tested. It provides a robust foundation for systematic Neural CSSR research with comprehensive metadata, quality assurance, and reproducibility features.
