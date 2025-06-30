@@ -50,8 +50,11 @@ python generate_unified_dataset.py --preset biased --output datasets/biased_exp
 ### Analyze Classical CSSR Performance
 
 ```bash
-# Run classical CSSR analysis on generated dataset
-python analyze_classical_cssr.py datasets/small_exp
+# Run classical CSSR analysis with parameter sweep
+python analyze_classical_cssr.py --dataset datasets/biased_exp --output results/cssr_analysis --parameter-sweep
+
+# Run machine distance analysis  
+python analyze_machine_distances.py biased_exp --output-dir results/distance_analysis
 ```
 
 ## Architecture
@@ -324,10 +327,13 @@ We use:
 
 ## Documentation
 
-- [**Neural CSSR Summary**](neural_cssr_summary.md): Comprehensive project overview
-- [**Dataset Framework**](neural_cssr_dataset_framework.md): Technical implementation details
-- [**Classical Analysis Framework**](classical_cssr_analysis_framework.md): Classical CSSR integration
-- [**Dataset Metadata Guide**](DATASET_METADATA_GUIDE.md): Metadata specification
+📁 **[Complete Documentation](plans_and_guides/)** - Comprehensive guides and implementation plans
+
+### Quick Access
+- [**Machine Distance Analysis Guide**](plans_and_guides/MACHINE_DISTANCE_INTERPRETATION_GUIDE.md): How to interpret analysis results
+- [**Usage Guide**](plans_and_guides/MACHINE_DISTANCE_README.md): Complete implementation overview  
+- [**Dataset Framework**](plans_and_guides/neural_cssr_dataset_framework.md): Technical implementation details
+- [**Project Summary**](plans_and_guides/neural_cssr_summary.md): Comprehensive project overview
 
 ## Research Applications
 

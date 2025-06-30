@@ -37,8 +37,14 @@ Examples:
   # Parameter sweep analysis
   python analyze_classical_cssr.py --dataset datasets/medium_exp --output results/medium_analysis --parameter-sweep
   
+  # Analysis with machine distance evaluation
+  python analyze_classical_cssr.py --dataset datasets/biased_exp --output results/biased_analysis --distance-analysis
+  
   # Batch analysis across multiple datasets
   python analyze_classical_cssr.py --batch --datasets-dir datasets --output results/batch_analysis
+  
+  # Batch analysis with distance evaluation
+  python analyze_classical_cssr.py --batch --datasets-dir datasets --output results/batch_analysis --distance-analysis
   
   # Quick single-parameter analysis
   python analyze_classical_cssr.py --dataset datasets/test_exp --output results/test --max-length 8 --significance 0.05 --no-sweep
@@ -75,6 +81,10 @@ Examples:
                        help='Only validate datasets without running analysis')
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Enable verbose output')
+    
+    # Machine distance analysis
+    parser.add_argument('--distance-analysis', action='store_true',
+                       help='Run machine distance analysis comparing CSSR results to ground truth')
     
     args = parser.parse_args()
     
@@ -136,6 +146,10 @@ def run_single_analysis(args):
     if not parameter_sweep:
         print(f"Single parameters: max_length={args.max_length}, significance={args.significance}")
     
+    print(f"Machine distance analysis: {'Enabled' if args.distance_analysis else 'Disabled'}")
+    if args.distance_analysis:
+        print("  Will compare CSSR results against ground truth using 3 distance metrics")
+    
     # Create analyzer and run analysis
     analyzer = ClassicalCSSRAnalyzer(
         dataset_dir=str(dataset_dir),
@@ -145,12 +159,13 @@ def run_single_analysis(args):
     start_time = time.time()
     
     if parameter_sweep:
-        results = analyzer.run_complete_analysis(parameter_sweep=True)
+        results = analyzer.run_complete_analysis(parameter_sweep=True, distance_analysis=args.distance_analysis)
     else:
         results = analyzer.run_complete_analysis(
             max_length=args.max_length,
             significance_level=args.significance,
-            parameter_sweep=False
+            parameter_sweep=False,
+            distance_analysis=args.distance_analysis
         )
     
     total_time = time.time() - start_time
@@ -195,7 +210,7 @@ def run_batch_analysis(args):
     # Run batch analysis
     start_time = time.time()
     
-    results = batch_analyzer.analyze_all_datasets(args.dataset_names)
+    results = batch_analyzer.analyze_all_datasets(args.dataset_names, distance_analysis=args.distance_analysis)
     
     total_time = time.time() - start_time
     

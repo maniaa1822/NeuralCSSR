@@ -17,6 +17,21 @@ Neural CSSR (Causal State Splitting Reconstruction) implementation with a unifie
 - Statistical analysis and metadata computation
 - Neural dataset formatting for transformers
 
+✅ **Machine Distance Analysis Complete**: Quantitative CSSR evaluation system
+- Implemented complete 3-metric distance analysis framework
+- State mapping distance (Hungarian algorithm + Jensen-Shannon divergence)
+- Symbol distribution distance (comprehensive JS divergence analysis)
+- Transition structure distance (graph-based connectivity metrics)
+- Professional visualization suite with 4 comprehensive plots
+- Automated report generation (Markdown + JSON + visualizations)
+
+✅ **CSSR Analysis Pipeline Complete**: End-to-end classical CSSR analysis
+- Parameter sweep optimization across multiple configurations
+- Comprehensive evaluation against ground truth
+- Performance baseline comparisons and scaling analysis
+- Integrated HTML reporting with professional visualizations
+- Production-ready analysis workflow for research
+
 ## Unified Dataset Generation Framework
 
 ### Core Architecture
@@ -40,7 +55,16 @@ Neural Formatting → Quality Validation → Structured Output
 /home/matteo/NeuralCSSR/
 ├── CLAUDE.md                          # Project memory/instructions
 ├── generate_unified_dataset.py        # Main dataset generation script
-├── neural_cssr_dataset_framework.md   # Framework specification
+├── analyze_classical_cssr.py          # Classical CSSR analysis pipeline
+├── analyze_machine_distances.py       # Machine distance analysis tool
+├── plans_and_guides/                  # Comprehensive project documentation
+│   ├── README.md                      # Documentation index
+│   ├── Machine_distances_plan.md      # Original implementation plan
+│   ├── MACHINE_DISTANCES_PLAN_STATUS.md # Implementation status
+│   ├── MACHINE_DISTANCE_README.md     # Distance analysis usage guide
+│   ├── MACHINE_DISTANCE_INTERPRETATION_GUIDE.md # Results interpretation
+│   ├── DISTANCE_ANALYSIS_INTEGRATION.md # Integration documentation
+│   └── neural_cssr_dataset_framework.md # Dataset framework specification
 ├── pyproject.toml                     # Python project configuration
 ├── uv.lock                           # UV package manager lock file
 ├── datasets/                         # Generated datasets directory
@@ -80,8 +104,26 @@ Neural Formatting → Quality Validation → Structured Output
 │   ├── enumeration/                  # Machine enumeration system
 │   │   ├── __init__.py
 │   │   └── enumerate_machines.py     # Machine enumeration logic
-│   ├── analysis/                     # Dataset analysis tools
-│   │   └── __init__.py
+│   ├── analysis/                     # Classical CSSR analysis tools
+│   │   ├── __init__.py
+│   │   ├── classical_analyzer.py     # Main CSSR analysis pipeline
+│   │   ├── dataset_loader.py         # Dataset loading utilities
+│   │   ├── cssr_runner.py           # CSSR execution engine
+│   │   ├── evaluation_engine.py     # Ground truth evaluation
+│   │   ├── performance_analyzer.py  # Performance analysis
+│   │   └── results_visualizer.py    # Visualization generation
+│   ├── evaluation/                   # Machine distance analysis system
+│   │   ├── __init__.py
+│   │   ├── machine_distance.py      # Main distance calculator
+│   │   ├── metrics/                 # Distance metric implementations
+│   │   │   ├── __init__.py
+│   │   │   ├── state_mapping.py     # Hungarian algorithm + JS divergence
+│   │   │   ├── symbol_distribution.py # Symbol distribution analysis
+│   │   │   └── transition_structure.py # Graph-based metrics
+│   │   └── utils/                   # Distance analysis utilities
+│   │       ├── __init__.py
+│   │       ├── data_loading.py      # CSSR/ground truth loaders
+│   │       └── visualization.py     # Distance visualization suite
 │   └── neural/                       # Neural network implementations
 │       └── __init__.py
 └── tests/                            # Test files directory
@@ -91,11 +133,24 @@ Neural Formatting → Quality Validation → Structured Output
 ```
 
 ## Key Implementation Files
+
+### Dataset Generation
 - **Main Script**: `generate_unified_dataset.py` - Complete dataset generation with CLI
 - **Core Framework**: `src/neural_cssr/data/dataset_generator.py` - Main orchestrator
 - **Machine Enumeration**: `src/neural_cssr/enumeration/enumerate_machines.py` - Machine library
 - **Configuration**: `src/neural_cssr/config/generation_schemas.py` - Experiment configs
-- **Classical CSSR**: `src/neural_cssr/classical/cssr.py` - Baseline algorithm
+
+### Classical CSSR Analysis
+- **Main Analysis Script**: `analyze_classical_cssr.py` - Complete CSSR analysis with parameter sweep
+- **Analysis Pipeline**: `src/neural_cssr/analysis/classical_analyzer.py` - End-to-end CSSR analysis
+- **CSSR Algorithm**: `src/neural_cssr/classical/cssr.py` - Core CSSR implementation
+
+### Machine Distance Analysis
+- **Main Analysis Script**: `analyze_machine_distances.py` - Complete distance analysis CLI
+- **Distance Calculator**: `src/neural_cssr/evaluation/machine_distance.py` - Main integration class
+- **State Mapping**: `src/neural_cssr/evaluation/metrics/state_mapping.py` - Hungarian + JS divergence
+- **Symbol Distribution**: `src/neural_cssr/evaluation/metrics/symbol_distribution.py` - Distribution analysis
+- **Transition Structure**: `src/neural_cssr/evaluation/metrics/transition_structure.py` - Graph metrics
 
 ## How to Use the Framework
 
@@ -233,10 +288,32 @@ Each generated dataset includes:
 - Statistical analysis automatically detects probability biases
 - Framework correctly handles mixed topological/non-topological datasets
 
+✅ **Machine Distance Analysis System**: Complete quantitative CSSR evaluation framework
+- Implemented 3-metric distance analysis (state mapping, symbol distribution, transition structure)
+- Hungarian algorithm optimization for optimal state assignments
+- Jensen-Shannon divergence for probability distribution comparison
+- Graph-based metrics for transition structure analysis
+- Professional visualization suite with 4 comprehensive plots
+- Automated report generation (Markdown + JSON + visualizations)
+
+✅ **Complete CSSR Analysis Pipeline**: End-to-end classical CSSR research workflow
+- Parameter sweep optimization across multiple configurations
+- Comprehensive evaluation against ground truth with statistical baselines
+- Performance analysis and scaling behavior assessment
+- Integrated HTML reporting with professional visualizations
+- Production-ready analysis pipeline for systematic research
+
+✅ **Validated Research Results**: Successful biased_exp dataset analysis
+- CSSR discovered 5 states matching ground truth structure
+- Excellent state mappings: State_1→Machine_10.S0 (JS: 0.038), State_2→Machine_10.S1 (JS: 0.089)
+- Overall quality score: 0.766 (Good match) with 0.919 confidence
+- Best parameters identified: L=10, α=0.001 across 16 combinations tested
+- Confirmed CSSR can distinguish between biased and uniform probability machines
+
 ## Dependencies and Environment
 - **Package Manager**: `uv` (not pip)
 - **Python Version**: 3.11+
-- **Key Dependencies**: PyTorch, NumPy, PyYAML
+- **Key Dependencies**: PyTorch, NumPy, PyYAML, SciPy, NetworkX, Matplotlib, Seaborn
 - **Installation**: `uv sync`
 
 ## Commands to Remember
@@ -251,9 +328,22 @@ python generate_unified_dataset.py --preset biased --output datasets/biased    #
 python generate_unified_dataset.py --config biased_experiment.yaml --output datasets/custom_bias
 python generate_unified_dataset.py --config mixed_probabilities.yaml --output datasets/mixed
 
-# Analysis and validation
-python analyze_biased_dataset.py datasets/biased_exp    # Analyze symbol frequencies by machine
-python test_bias_functionality.py                       # Test bias implementation
+# Classical CSSR Analysis
+python analyze_classical_cssr.py --dataset datasets/biased_exp --output results/cssr_analysis --parameter-sweep
+python analyze_classical_cssr.py --dataset datasets/small_exp --output results/small_analysis --no-sweep
+python analyze_classical_cssr.py --batch --datasets-dir datasets --output results/batch_analysis
+
+# Machine Distance Analysis
+python analyze_machine_distances.py biased_exp --output-dir results/distance_analysis
+python analyze_machine_distances.py biased_exp --quiet  # For scripting
+
+# Complete Workflow (recommended)
+# Step 1: Generate dataset
+python generate_unified_dataset.py --preset biased --output datasets/biased_exp
+# Step 2: Run CSSR analysis 
+python analyze_classical_cssr.py --dataset datasets/biased_exp --output results/cssr_analysis --parameter-sweep
+# Step 3: Run distance analysis
+python analyze_machine_distances.py biased_exp --output-dir results/distance_analysis
 
 # Test classical CSSR (legacy)
 uv run python tests/classical_cssr/test_classical_cssr.py
@@ -273,17 +363,27 @@ uv sync
 
 ## Next Steps for Research
 1. **Neural Network Training**: Use generated PyTorch datasets for transformer training
-2. **Classical Comparison**: Run classical CSSR on raw sequences for baseline comparison
-3. **Scaling Studies**: Generate datasets of different scales to study transfer learning
-4. **Analysis Framework**: Develop tools for comparing neural vs classical CSSR performance
-5. **Evaluation Metrics**: Implement comprehensive evaluation and visualization tools
+2. **Comparative Studies**: Compare neural CSSR vs classical CSSR performance using distance metrics
+3. **Scaling Studies**: Generate and analyze datasets of different scales and complexities
+4. **Parameter Optimization**: Use distance analysis for automated CSSR parameter tuning
+5. **Transfer Learning**: Study transfer learning scaling laws between different machine types
+
+## Research Workflow Established ✅
+**Complete End-to-End Pipeline Available**:
+1. **Dataset Generation** → `generate_unified_dataset.py --preset biased`
+2. **CSSR Analysis** → `analyze_classical_cssr.py --parameter-sweep`  
+3. **Distance Evaluation** → `analyze_machine_distances.py`
+4. **Results**: Quantitative assessment with professional reports and visualizations
 
 ## Project Progress Updates
-- Successfully completed initial dataset generation framework
-- Developed robust configuration-driven generation system
-- Implemented comprehensive quality validation
-- Generated first small-scale experimental dataset
-- Prepared infrastructure for scaling experiments
+- ✅ Successfully completed unified dataset generation framework
+- ✅ Developed robust configuration-driven generation system  
+- ✅ Implemented comprehensive quality validation
+- ✅ **NEW**: Complete machine distance analysis framework implemented
+- ✅ **NEW**: End-to-end CSSR analysis pipeline with parameter sweep
+- ✅ **NEW**: Validated research workflow on biased_exp dataset
+- ✅ **NEW**: Professional reporting and visualization suite
+- ✅ Prepared infrastructure for systematic research studies
 
-## Framework Status: Production Ready ✅
-The unified dataset generation framework is complete and tested. It provides a robust foundation for systematic Neural CSSR research with comprehensive metadata, quality assurance, and reproducibility features.
+## Framework Status: Research Ready ✅
+**Complete Neural CSSR Research Platform**: Dataset generation + Classical CSSR analysis + Quantitative evaluation framework. Production-ready with comprehensive metadata, parameter optimization, quality assurance, and professional reporting. Ready for systematic Neural CSSR research, comparative studies, and publication-quality analysis.

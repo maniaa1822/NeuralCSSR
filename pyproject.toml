@@ -11,5 +11,6 @@ dependencies = [
     "tqdm",
     "scikit-learn",
     "matplotlib",
-    "seaborn"
+    "seaborn",
+    "networkx"
 ]
