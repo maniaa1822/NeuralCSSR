@@ -1,0 +1,42 @@
+{
+  "structural_measures": {
+    "state_count_distribution": {
+      "mean": 1.6,
+      "std": 0.4898979485566356,
+      "min": 1,
+      "max": 2,
+      "counts": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "transition_count_distribution": {
+      "mean": 3.2,
+      "std": 0.9797958971132712,
+      "min": 2,
+      "max": 4
+    },
+    "strongly_connected_ratio": 1.0
+  },
+  "cycle_analysis": {
+    "average_shortest_cycle": 1.0,
+    "cycle_complexity_distribution": {
+      "1": 2,
+      "2": 3
+    }
+  },
+  "learning_complexity": {
+    "statistical_complexity_distribution": {
+      "mean": 0.5673183336217958,
+      "std": 0.46417324769241175,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "entropy_rate_distribution": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    }
+  }
+}

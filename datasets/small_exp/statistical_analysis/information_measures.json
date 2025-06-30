@@ -1,0 +1,89 @@
+{
+  "entropy_measures": {
+    "unigram_entropy": 0.999994954180685,
+    "bigram_entropy": 1.9999871439188914,
+    "trigram_entropy": 2.9999757340768687,
+    "conditional_entropy_1": 0.9999921897382065,
+    "conditional_entropy_2": 0.9999885901579773,
+    "entropy_rate_estimate": 0.9999921897382065
+  },
+  "complexity_measures": {
+    "lempel_ziv_complexity": {
+      "mean": 0.3440591051472811,
+      "std": 0.04500271687030327,
+      "min": 0.2736842105263158,
+      "max": 0.5
+    },
+    "compression_ratio": {
+      "mean": 0.9765042072586292,
+      "std": 0.04470808116890222,
+      "min": 0.8080808080808081,
+      "max": 1.0
+    },
+    "effective_alphabet_size": {
+      "mean": 2.0,
+      "std": 0.0,
+      "min": 2,
+      "max": 2
+    }
+  },
+  "machine_measures": {
+    "0": {
+      "theoretical_properties": {
+        "num_states": 1,
+        "alphabet_size": 2,
+        "num_transitions": 2,
+        "statistical_complexity": 0.0,
+        "is_topological": true,
+        "entropy_rate": 1.0,
+        "period": 1
+      },
+      "empirical_entropy_measures": {
+        "unigram_entropy": 0.9999993853537282,
+        "bigram_entropy": 1.9999823753637131,
+        "trigram_entropy": 2.9999399869648493,
+        "conditional_entropy_1": 0.9999829900099849,
+        "conditional_entropy_2": 0.9999576116011362,
+        "entropy_rate_estimate": 0.9999829900099849
+      },
+      "num_sequences": 1000,
+      "statistical_complexity": 0.0,
+      "theoretical_entropy_rate": 1.0,
+      "empirical_entropy_rate": 0.9999829900099849
+    },
+    "1": {
+      "theoretical_properties": {
+        "num_states": 2,
+        "alphabet_size": 2,
+        "num_transitions": 4,
+        "statistical_complexity": 0.9182958340544896,
+        "is_topological": true,
+        "entropy_rate": 1.0,
+        "period": 1
+      },
+      "empirical_entropy_measures": {
+        "unigram_entropy": 0.9999897799626678,
+        "bigram_entropy": 1.999979548345728,
+        "trigram_entropy": 2.9999328416335485,
+        "conditional_entropy_1": 0.9999897683830603,
+        "conditional_entropy_2": 0.9999532932878203,
+        "entropy_rate_estimate": 0.9999897683830603
+      },
+      "num_sequences": 1500,
+      "statistical_complexity": 0.9182958340544896,
+      "theoretical_entropy_rate": 1.0,
+      "empirical_entropy_rate": 0.9999897683830603
+    }
+  },
+  "predictive_information": {
+    "mi_history_1": 2.76424595061788e-06,
+    "mi_history_2": 6.395509323275255e-06,
+    "mi_history_3": 8.800073204301016e-06
+  },
+  "dataset_level": {
+    "total_sequences": 2500,
+    "total_symbols": 151240,
+    "unique_sequences": 2500,
+    "diversity_ratio": 1.0
+  }
+}

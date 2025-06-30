@@ -1,0 +1,74 @@
+experiment_name: "mixed_probability_study"
+random_seed: 42
+
+machine_specs:
+  # Uniform baseline
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 800
+    weight: 1.0
+    topological: true
+    
+  # Mild bias
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 800
+    weight: 1.0
+    topological: false
+    bias_strength: 0.3  # Mild deviation from uniform
+    probability_seed: 111
+    
+  # Strong bias
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 800
+    weight: 1.0
+    topological: false
+    bias_strength: 0.8  # Strong deviation from uniform
+    probability_seed: 222
+    
+  # Maximum bias
+  - complexity_class: "2-state-binary"
+    machine_count: 2
+    samples_per_machine: 800
+    weight: 1.0
+    topological: false
+    bias_strength: 1.0  # Maximum deviation from uniform
+    probability_seed: 333
+    
+  # Custom extreme biases
+  - complexity_class: "3-state-binary"
+    machine_count: 1
+    samples_per_machine: 1200
+    weight: 1.5
+    topological: false
+    custom_probabilities:
+      "S0": {"0": 0.9, "1": 0.1}  # Very strong bias
+      "S1": {"0": 0.1, "1": 0.9}  # Opposite strong bias
+      "S2": {"0": 0.05, "1": 0.95}  # Extreme bias
+
+sequence_spec:
+  length_distribution: [50, 200]
+  total_sequences: 10000
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+quality_spec:
+  min_state_coverage: 40
+  min_transition_coverage: 20
+  entropy_tolerance: 0.15  # Very relaxed for extreme biases
+  length_diversity_threshold: 0.3
+
+neural_format_config:
+  context_length: 512
+  vocab_special_tokens: ["<PAD>", "<UNK>"]
+  include_position_metadata: true
+  batch_friendly_padding: true
+
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false

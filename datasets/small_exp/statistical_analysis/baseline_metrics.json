@@ -1,0 +1,109 @@
+{
+  "random_baselines": {
+    "random_cross_entropy": 1.0,
+    "random_state_accuracy": 0.5,
+    "random_perplexity": 2,
+    "random_bits_per_symbol": 1.0,
+    "alphabet_size": 2,
+    "num_states": 2
+  },
+  "empirical_baselines": {
+    "1_gram_model": {
+      "cross_entropy": 0.9999949541789412,
+      "perplexity": 1.9999930050189514,
+      "accuracy": 0.5013224014810896,
+      "coverage": 1.0,
+      "n": 1
+    },
+    "2_gram_model": {
+      "cross_entropy": 0.9999921646066241,
+      "perplexity": 1.9999891378678425,
+      "accuracy": 0.5013257162504381,
+      "coverage": 1.0,
+      "n": 2
+    },
+    "3_gram_model": {
+      "cross_entropy": 0.9999885585372721,
+      "perplexity": 1.9999841388276318,
+      "accuracy": 0.5019042833150399,
+      "coverage": 1.0,
+      "n": 3
+    },
+    "4_gram_model": {
+      "cross_entropy": 0.9999861791048608,
+      "perplexity": 1.9999808402627772,
+      "accuracy": 0.501907601975707,
+      "coverage": 1.0,
+      "n": 4
+    },
+    "frequency_baseline": {
+      "accuracy": 0.5013224014810896,
+      "cross_entropy": 0.9961893928165902,
+      "perplexity": 1.9947243471379583,
+      "most_frequent_symbol": "1",
+      "most_frequent_probability": 0.5013224014810896
+    },
+    "entropy_limits": {
+      "empirical_entropy": 0.999994954180685,
+      "alphabet_size": 2,
+      "max_possible_entropy": 1.0,
+      "entropy_efficiency": 0.999994954180685,
+      "conditional_entropy_1": 0.9999921646070108,
+      "conditional_entropy_2": 0.9999885585379068,
+      "conditional_entropy_3": 0.9999861791058857
+    }
+  },
+  "optimal_baselines": {
+    "perfect_state_accuracy": 1.0,
+    "optimal_cross_entropy": 1.0,
+    "optimal_perplexity": 2.0,
+    "bayes_optimal_accuracy": 0.5,
+    "bayes_accuracy_distribution": {
+      "mean": 0.5,
+      "std": 0.0,
+      "min": 0.5,
+      "max": 0.5,
+      "by_machine": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "mean_statistical_complexity": 0.5673183336217958,
+    "sample_complexity_estimates": {
+      "mean_estimate": 16.77610073190235,
+      "std_estimate": 8.805618571434037,
+      "min_estimate": 5.991464547107982,
+      "max_estimate": 23.965858188431927,
+      "estimates_by_machine": [
+        5.991464547107982,
+        23.965858188431927,
+        23.965858188431927,
+        5.991464547107982,
+        23.965858188431927
+      ]
+    },
+    "computational_complexity_estimates": {
+      "mean_complexity": 16384.0,
+      "std_complexity": 5016.554993219948,
+      "min_complexity": 10240,
+      "max_complexity": 20480,
+      "complexities_by_machine": [
+        10240,
+        20480,
+        20480,
+        10240,
+        20480
+      ]
+    },
+    "num_machines": 5,
+    "entropy_rate_distribution": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    }
+  }
+}

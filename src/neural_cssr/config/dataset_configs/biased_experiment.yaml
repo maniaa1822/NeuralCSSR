@@ -1,0 +1,56 @@
+experiment_name: "biased_probability_experiment"
+random_seed: 42
+
+machine_specs:
+  # Topological machines (uniform probabilities) for baseline
+  - complexity_class: "2-state-binary"
+    machine_count: 2
+    samples_per_machine: 1000
+    weight: 1.0
+    topological: true
+    
+  # Biased machines with random probabilities
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 1000
+    weight: 1.2
+    topological: false
+    bias_strength: 0.7  # Strong bias away from uniform
+    probability_seed: 123
+    
+  # Custom probability machine
+  - complexity_class: "3-state-binary"
+    machine_count: 1
+    samples_per_machine: 1500
+    weight: 1.5
+    topological: false
+    custom_probabilities:
+      "S0": {"0": 0.8, "1": 0.2}  # Strong bias toward '0'
+      "S1": {"0": 0.3, "1": 0.7}  # Strong bias toward '1'
+      "S2": {"0": 0.5, "1": 0.5}  # Uniform (for comparison)
+
+sequence_spec:
+  length_distribution: [30, 150]
+  total_sequences: 6500
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+quality_spec:
+  min_state_coverage: 50
+  min_transition_coverage: 25
+  entropy_tolerance: 0.1  # Higher tolerance for non-uniform distributions
+  length_diversity_threshold: 0.3
+
+neural_format_config:
+  context_length: 256
+  vocab_special_tokens: ["<PAD>", "<UNK>"]
+  include_position_metadata: true
+  batch_friendly_padding: true
+
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false

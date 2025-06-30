@@ -1,0 +1,42 @@
+experiment_name: "medium_transfer_experiment"
+random_seed: 42
+
+machine_specs:
+  - complexity_class: "2-state-binary"
+    machine_count: 5
+    samples_per_machine: 2000
+    weight: 1.0
+  - complexity_class: "3-state-binary" 
+    machine_count: 8
+    samples_per_machine: 1500
+    weight: 1.2
+  - complexity_class: "2-state-ternary"
+    machine_count: 3
+    samples_per_machine: 1000
+    weight: 0.8
+
+sequence_spec:
+  length_distribution: [50, 500]
+  total_sequences: 25000
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+quality_spec:
+  min_state_coverage: 100
+  min_transition_coverage: 50
+  entropy_tolerance: 0.03
+  length_diversity_threshold: 0.4
+
+neural_format_config:
+  context_length: 512
+  vocab_special_tokens: ["<PAD>", "<UNK>"]
+  include_position_metadata: true
+  batch_friendly_padding: true
+
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false
