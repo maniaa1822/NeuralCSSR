@@ -38,7 +38,7 @@ class ClassicalCSSR:
         self,
         significance_level: float = 0.05,
         min_count: int = 5,
-        test_type: str = "chi_square",
+        test_type: str = "kl_divergence", #type of statistical test to use: "chi_square", "kl_divergence", "permutation"
         neural_probability_provider=None  # Optional: NeuralCSSRProbabilityProvider
     ):
         self.significance_level = significance_level

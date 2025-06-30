@@ -151,19 +151,31 @@ class UnifiedDatasetGenerator:
             # Parse complexity class (e.g., "2-state-binary" -> 2 states)
             num_states = int(machine_spec.complexity_class.split('-')[0])
             
-            # Generate machines for this complexity class
-            machines = enumerate_machines_library(
+            # Generate all possible machines with this number of states
+            all_possible_machines = enumerate_machines_library(
                 max_states=num_states,
                 alphabet=alphabet,
-                max_machines_per_size=machine_spec.machine_count
+                max_machines_per_size=None  # Get all possible machines
             )
             
-            # Filter to get exactly the requested number
-            if len(machines) > machine_spec.machine_count:
-                machines = machines[:machine_spec.machine_count]
+            # Filter to machines with exactly the requested number of states
+            machines_with_n_states = [
+                m for m in all_possible_machines 
+                if m['properties']['num_states'] == num_states
+            ]
+            
+            # Select the requested number of distinct machines
+            if len(machines_with_n_states) >= machine_spec.machine_count:
+                selected_machines = machines_with_n_states[:machine_spec.machine_count]
+            else:
+                # If not enough distinct machines, repeat the available ones
+                selected_machines = []
+                for i in range(machine_spec.machine_count):
+                    machine_idx = i % len(machines_with_n_states)
+                    selected_machines.append(machines_with_n_states[machine_idx])
                 
             # Configure machine probabilities and add metadata
-            for machine in machines:
+            for i, machine in enumerate(selected_machines):
                 machine_obj = machine['machine']
                 
                 # Configure transition probabilities
@@ -174,18 +186,25 @@ class UnifiedDatasetGenerator:
                     else:
                         # Use random probabilities with specified bias
                         machine_obj.randomize_probabilities(
-                            seed=machine_spec.probability_seed,
+                            seed=machine_spec.probability_seed + i if machine_spec.probability_seed else None,
                             bias_strength=machine_spec.bias_strength
                         )
                 
-                # Add metadata
+                # Recompute properties after bias application
+                from ..enumeration.enumerate_machines import MachineEnumerator
+                enumerator = MachineEnumerator(max_states=num_states, alphabet=alphabet)
+                updated_properties = enumerator.compute_machine_properties(machine_obj)
+                
+                # Add metadata - each machine will generate samples_per_machine sequences
                 machine['sampling_weight'] = machine_spec.weight
                 machine['complexity_class'] = machine_spec.complexity_class
                 machine['samples_per_machine'] = machine_spec.samples_per_machine
-                machine['is_topological'] = machine_spec.topological
+                machine['is_topological'] = machine_obj.is_topological()  # Check actual machine state
                 machine['bias_strength'] = machine_spec.bias_strength
+                machine['machine_spec_id'] = len(all_machines)  # Unique ID for this spec instance
+                machine['properties'] = updated_properties  # Update with post-bias properties
                 
-            all_machines.extend(machines)
+            all_machines.extend(selected_machines)
             
         return all_machines
         
@@ -422,9 +441,16 @@ class UnifiedDatasetGenerator:
             json.dump(vocab_metadata, f, indent=2)
             
         # Save ground truth information
+        # Group machine properties by unique machine ID
+        unique_machines = {}
+        for metadata in sequences_data['metadata']:
+            machine_id = metadata['machine_id']
+            if machine_id not in unique_machines:
+                unique_machines[machine_id] = metadata.get('machine_properties', {})
+        
         ground_truth = {
             'causal_state_labels': {i: m.get('state_trajectory', []) for i, m in enumerate(sequences_data['metadata'])},
-            'machine_properties': {i: m.get('machine_properties', {}) for i, m in enumerate(sequences_data['metadata'])},
+            'machine_properties': unique_machines,  # One entry per unique machine
             'sequence_metadata': sequences_data['metadata']
         }
         

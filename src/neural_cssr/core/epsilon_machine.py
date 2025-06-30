@@ -204,6 +204,91 @@ class EpsilonMachine:
                         updated_transitions.append((next_state, uniform_prob))
                     self.transitions[key] = updated_transitions
                     
+    def randomize_probabilities(self, seed: Optional[int] = None, bias_strength: float = 0.5) -> None:
+        """
+        Randomize transition probabilities with specified bias strength.
+        
+        Args:
+            seed: Random seed for reproducibility
+            bias_strength: How much to bias away from uniform (0.0=uniform, 1.0=maximum bias)
+        """
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+        
+        # For each state, randomize the emission probabilities
+        for state in self.states:
+            # Get all outgoing transitions from this state
+            outgoing_transitions = []
+            for symbol in self.alphabet:
+                key = (state, symbol)
+                if key in self.transitions:
+                    for next_state, _ in self.transitions[key]:
+                        outgoing_transitions.append((key, next_state))
+            
+            if outgoing_transitions:
+                # Generate random probabilities with bias
+                num_transitions = len(outgoing_transitions)
+                
+                if bias_strength == 0.0:
+                    # Uniform probabilities
+                    probs = [1.0 / num_transitions] * num_transitions
+                else:
+                    # Generate biased probabilities
+                    # Start with uniform, then apply bias
+                    base_probs = np.ones(num_transitions) / num_transitions
+                    
+                    # Add random noise scaled by bias_strength
+                    noise = np.random.exponential(scale=bias_strength, size=num_transitions)
+                    biased_probs = base_probs + noise
+                    
+                    # Normalize to sum to 1
+                    probs = biased_probs / np.sum(biased_probs)
+                
+                # Update transitions with new probabilities
+                for i, (key, next_state) in enumerate(outgoing_transitions):
+                    # Clear existing transitions for this key
+                    self.transitions[key] = [(next_state, probs[i])]
+    
+    def set_transition_probabilities(self, probability_map: Dict[str, Dict[str, float]]) -> None:
+        """
+        Set custom transition probabilities for each state.
+        
+        Args:
+            probability_map: Mapping from state_id to {symbol: probability}
+                            e.g., {"S0": {"0": 0.8, "1": 0.2}, "S1": {"0": 0.3, "1": 0.7}}
+        """
+        # Clear existing probabilities and rebuild with custom ones
+        for state_id, symbol_probs in probability_map.items():
+            # Find the actual state name (might be different from state_id)
+            actual_state = None
+            for state in self.states:
+                if state == state_id or state.endswith(f"_{state_id}") or state_id in state:
+                    actual_state = state
+                    break
+            
+            if actual_state is None:
+                # If state not found by ID, try to match by index
+                state_list = sorted(list(self.states))
+                try:
+                    state_idx = int(state_id.replace('S', ''))
+                    if 0 <= state_idx < len(state_list):
+                        actual_state = state_list[state_idx]
+                except (ValueError, IndexError):
+                    continue
+            
+            if actual_state is not None:
+                # Update probabilities for each symbol from this state
+                for symbol, prob in symbol_probs.items():
+                    key = (actual_state, symbol)
+                    if key in self.transitions:
+                        # Keep the same next states, just update probabilities
+                        existing_transitions = self.transitions[key]
+                        if existing_transitions:
+                            # Assume single next state per (state, symbol) pair for simplicity
+                            next_state = existing_transitions[0][0]
+                            self.transitions[key] = [(next_state, prob)]
+
     def get_statistical_complexity(self) -> float:
         """
         Compute statistical complexity (entropy of the stationary distribution).

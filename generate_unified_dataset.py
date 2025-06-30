@@ -9,6 +9,7 @@ Usage:
     python generate_unified_dataset.py --config <config_file> --output <output_dir>
     python generate_unified_dataset.py --preset small --output datasets/small_exp
     python generate_unified_dataset.py --preset medium --output datasets/medium_exp
+    python generate_unified_dataset.py --biased --output datasets/biased_exp
 """
 
 import argparse
