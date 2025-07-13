@@ -8,6 +8,9 @@ from datetime import datetime
 from .metrics.state_mapping import StateMappingDistance
 from .metrics.symbol_distribution import SymbolDistributionDistance
 from .metrics.transition_structure import TransitionStructureDistance
+from .metrics.information_theoretic import InformationTheoreticDistance
+from .metrics.causal_equivalence import CausalEquivalenceDistance
+from .metrics.optimality_analysis import OptimalityAnalysis
 
 
 class MachineDistanceCalculator:
@@ -15,9 +18,15 @@ class MachineDistanceCalculator:
     
     def __init__(self):
         """Initialize all distance metric calculators."""
+        # Empirical distance metrics (existing)
         self.state_mapping = StateMappingDistance()
         self.symbol_distribution = SymbolDistributionDistance()
         self.transition_structure = TransitionStructureDistance()
+        
+        # Theoretical ε-machine metrics (new)
+        self.information_theoretic = InformationTheoreticDistance()
+        self.causal_equivalence = CausalEquivalenceDistance()
+        self.optimality_analysis = OptimalityAnalysis()
     
     def compute_all_distances(self, discovered_machine: Dict[str, Any], 
                             ground_truth_machines: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -54,6 +63,52 @@ class MachineDistanceCalculator:
                 'ground_truth_machine_count': len(ground_truth_machines),
                 'ground_truth_machine_ids': [m.get('machine_id', 'unknown') for m in ground_truth_machines]
             }
+        }
+    
+    def compute_comprehensive_analysis(self, discovered_machine: Dict[str, Any], 
+                                     ground_truth_machines: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Compute both theoretical and empirical distance analysis.
+        
+        Combines traditional empirical metrics with theoretically-grounded ε-machine analysis
+        based on computational mechanics principles.
+        
+        Args:
+            discovered_machine: CSSR discovered machine results
+            ground_truth_machines: List of ground truth machines from dataset
+            
+        Returns:
+            Dictionary containing comprehensive analysis with both theoretical and empirical metrics
+        """
+        # Compute empirical analysis (existing metrics)
+        empirical_analysis = self.compute_all_distances(discovered_machine, ground_truth_machines)
+        
+        # Compute theoretical analysis (new ε-machine metrics)
+        information_theoretic_distance = self.information_theoretic.compute(discovered_machine, ground_truth_machines)
+        causal_equivalence_distance = self.causal_equivalence.compute(discovered_machine, ground_truth_machines)
+        optimality_analysis = self.optimality_analysis.compute(discovered_machine, ground_truth_machines)
+        
+        # Compute combined assessment
+        combined_assessment = self._compute_combined_assessment(
+            empirical_analysis, 
+            information_theoretic_distance,
+            causal_equivalence_distance,
+            optimality_analysis
+        )
+        
+        return {
+            'theoretical_analysis': {
+                'information_theoretic_distance': information_theoretic_distance,
+                'causal_equivalence_distance': causal_equivalence_distance,
+                'optimality_analysis': optimality_analysis
+            },
+            'empirical_analysis': {
+                'state_mapping_distance': empirical_analysis['state_mapping_distance'],
+                'symbol_distribution_distance': empirical_analysis['symbol_distribution_distance'],
+                'transition_structure_distance': empirical_analysis['transition_structure_distance']
+            },
+            'combined_assessment': combined_assessment,
+            'metadata': empirical_analysis['metadata']
         }
     
     def _compute_summary(self, state_mapping: Dict[str, Any], 
@@ -100,6 +155,58 @@ class MachineDistanceCalculator:
             'metric_scores': metric_scores,
             'interpretation': self._interpret_results(overall_quality, confidence, best_metric),
             'recommendations': self._generate_recommendations(state_mapping, symbol_distribution, transition_structure)
+        }
+    
+    def _compute_combined_assessment(self, empirical_analysis: Dict[str, Any],
+                                   information_theoretic: Dict[str, Any],
+                                   causal_equivalence: Dict[str, Any],
+                                   optimality_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Compute combined assessment integrating theoretical and empirical metrics."""
+        
+        # Extract quality scores from different analyses
+        empirical_quality = empirical_analysis.get('summary', {}).get('overall_quality_score', 0.0)
+        theoretical_quality = information_theoretic.get('quality_assessment', {}).get('quality_score', 0.0)
+        causal_quality = causal_equivalence.get('quality_assessment', {}).get('quality_score', 0.0)
+        optimality_score = optimality_analysis.get('overall_optimality_score', 0.0)
+        
+        # Compute weighted combined scores
+        overall_theoretical_quality = (
+            0.4 * theoretical_quality +
+            0.4 * causal_quality +
+            0.2 * optimality_score
+        )
+        
+        # Consensus between theoretical and empirical approaches
+        consensus_quality_score = (
+            0.5 * empirical_quality +
+            0.5 * overall_theoretical_quality
+        )
+        
+        # Confidence based on agreement between approaches
+        quality_difference = abs(empirical_quality - overall_theoretical_quality)
+        confidence_level = 1.0 - min(quality_difference, 1.0)
+        
+        # Generate research interpretation
+        research_interpretation = self._generate_research_interpretation(
+            empirical_quality, overall_theoretical_quality, consensus_quality_score, 
+            confidence_level, information_theoretic, causal_equivalence, optimality_analysis
+        )
+        
+        return {
+            'overall_theoretical_quality': overall_theoretical_quality,
+            'overall_empirical_quality': empirical_quality,
+            'consensus_quality_score': consensus_quality_score,
+            'confidence_level': confidence_level,
+            'research_interpretation': research_interpretation,
+            'component_analysis': {
+                'information_theoretic_quality': theoretical_quality,
+                'causal_equivalence_quality': causal_quality,
+                'optimality_score': optimality_score,
+                'empirical_quality': empirical_quality
+            },
+            'methodological_agreement': self._assess_methodological_agreement(
+                empirical_quality, overall_theoretical_quality, confidence_level
+            )
         }
     
     def _extract_machine_info(self, discovered_machine: Dict[str, Any]) -> Dict[str, Any]:
@@ -190,7 +297,6 @@ class MachineDistanceCalculator:
             )
         
         # Check state count mismatch
-        discovered_states = len(state_mapping.get('optimal_assignment', []))
         unmatched_discovered = len(state_mapping.get('unmatched_discovered_states', []))
         if unmatched_discovered > 0:
             recommendations.append(
@@ -365,3 +471,123 @@ Generated: {metadata.get('computation_timestamp', 'Unknown')}
                 section += f"- **{prop}**: Discovered={comparison.get('discovered', 'N/A')}, Ground Truth={comparison.get('ground_truth', 'N/A')}, Similarity={comparison.get('similarity', 0.0):.3f}\n"
         
         return section
+    
+    def _generate_research_interpretation(self, empirical_quality: float, theoretical_quality: float,
+                                        consensus_quality: float, confidence_level: float,
+                                        information_theoretic: Dict[str, Any], 
+                                        causal_equivalence: Dict[str, Any],
+                                        optimality_analysis: Dict[str, Any]) -> str:
+        """Generate comprehensive research interpretation."""
+        
+        # Overall assessment
+        if consensus_quality >= 0.85:
+            overall_assessment = "Excellent ε-machine recovery - both theoretical and empirical metrics indicate high-quality CSSR performance"
+        elif consensus_quality >= 0.7:
+            overall_assessment = "Good ε-machine recovery - strong correspondence between discovered and theoretical structures"
+        elif consensus_quality >= 0.55:
+            overall_assessment = "Fair ε-machine recovery - moderate correspondence with room for parameter optimization"
+        elif consensus_quality >= 0.4:
+            overall_assessment = "Poor ε-machine recovery - significant differences from theoretical optimal structure"
+        else:
+            overall_assessment = "Very poor ε-machine recovery - major structural discrepancies detected"
+        
+        # Theoretical insights
+        optimality_assessment = optimality_analysis.get('optimality_assessment', {}).get('assessment_level', 'unknown')
+        causal_assessment = causal_equivalence.get('quality_assessment', {}).get('quality_level', 'unknown')
+        
+        theoretical_insights = []
+        if optimality_assessment == 'excellent':
+            theoretical_insights.append("Discovered machine exhibits excellent ε-machine optimality properties")
+        elif optimality_assessment in ['poor', 'very_poor']:
+            theoretical_insights.append("Discovered machine shows poor optimality - suggests parameter tuning needed")
+        
+        if causal_assessment == 'excellent':
+            theoretical_insights.append("Strong causal equivalence relationships detected")
+        elif causal_assessment in ['poor', 'very_poor']:
+            theoretical_insights.append("Weak causal state correspondence - may indicate over/under-splitting")
+        
+        # Methodological agreement
+        if confidence_level >= 0.8:
+            agreement_note = "High agreement between theoretical and empirical approaches provides strong validation"
+        elif confidence_level >= 0.6:
+            agreement_note = "Moderate agreement between theoretical and empirical approaches"
+        else:
+            agreement_note = "Low agreement between approaches - results should be interpreted cautiously"
+        
+        # Information theoretic insights
+        info_optimality = information_theoretic.get('theoretical_optimality_ratio', 1.0)
+        if info_optimality < 0.8:
+            theoretical_insights.append(f"Information-theoretic analysis suggests suboptimal complexity (ratio: {info_optimality:.2f})")
+        
+        # Quality comparison insight
+        if abs(empirical_quality - theoretical_quality) > 0.2:
+            if empirical_quality > theoretical_quality:
+                theoretical_insights.append("Empirical metrics more optimistic than theoretical analysis")
+            else:
+                theoretical_insights.append("Theoretical metrics more optimistic than empirical analysis")
+        
+        # Combine insights
+        interpretation = f"{overall_assessment}. "
+        if theoretical_insights:
+            interpretation += " ".join(theoretical_insights) + ". "
+        interpretation += agreement_note + "."
+        
+        return interpretation
+    
+    def _assess_methodological_agreement(self, empirical_quality: float, 
+                                       theoretical_quality: float, 
+                                       confidence_level: float) -> Dict[str, Any]:
+        """Assess agreement between methodological approaches."""
+        
+        quality_difference = abs(empirical_quality - theoretical_quality)
+        
+        if quality_difference < 0.1:
+            agreement_level = "high"
+            description = "Excellent agreement between theoretical and empirical assessments"
+        elif quality_difference < 0.2:
+            agreement_level = "moderate"
+            description = "Good agreement between theoretical and empirical assessments"
+        elif quality_difference < 0.3:
+            agreement_level = "fair"
+            description = "Fair agreement between theoretical and empirical assessments"
+        else:
+            agreement_level = "poor"
+            description = "Poor agreement between theoretical and empirical assessments"
+        
+        # Determine which approach is more optimistic
+        if empirical_quality > theoretical_quality:
+            bias_direction = "empirical_optimistic"
+            bias_description = "Empirical metrics suggest better performance than theoretical analysis"
+        elif theoretical_quality > empirical_quality:
+            bias_direction = "theoretical_optimistic" 
+            bias_description = "Theoretical metrics suggest better performance than empirical analysis"
+        else:
+            bias_direction = "balanced"
+            bias_description = "Both approaches provide similar assessments"
+        
+        return {
+            'agreement_level': agreement_level,
+            'description': description,
+            'quality_difference': quality_difference,
+            'confidence_level': confidence_level,
+            'bias_direction': bias_direction,
+            'bias_description': bias_description,
+            'recommendation': self._get_methodological_recommendation(agreement_level, bias_direction)
+        }
+    
+    def _get_methodological_recommendation(self, agreement_level: str, bias_direction: str) -> str:
+        """Get recommendation based on methodological agreement."""
+        
+        if agreement_level == "high":
+            return "Results are highly reliable - both approaches confirm the assessment"
+        elif agreement_level == "moderate":
+            return "Results are reliable - minor differences between approaches are expected"
+        elif agreement_level == "fair":
+            if bias_direction == "empirical_optimistic":
+                return "Consider theoretical perspective - empirical metrics may be overoptimistic"
+            elif bias_direction == "theoretical_optimistic":
+                return "Consider empirical evidence - theoretical metrics may be overoptimistic"
+            else:
+                return "Moderate disagreement between approaches - consider additional validation"
+        else:
+            return "Results require careful interpretation - significant disagreement between approaches detected"

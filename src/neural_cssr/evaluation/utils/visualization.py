@@ -5,6 +5,7 @@ import numpy as np
 from typing import Dict, List, Any, Optional
 import seaborn as sns
 from pathlib import Path
+from .theoretical_visualization import create_theoretical_visualizations
 
 
 def create_distance_visualizations(results: Dict[str, Any], output_dir: str) -> List[str]:
@@ -389,3 +390,38 @@ def _create_state_comparison_heatmap(results: Dict[str, Any], output_path: Path)
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
+
+
+def create_comprehensive_visualizations(results: Dict[str, Any], output_dir: str) -> List[str]:
+    """
+    Create comprehensive visualizations for both empirical and theoretical analysis.
+    
+    Args:
+        results: Results from comprehensive analysis including both empirical and theoretical metrics
+        output_dir: Directory to save visualization files
+        
+    Returns:
+        List of paths to generated visualization files
+    """
+    generated_files = []
+    
+    # Extract empirical data for empirical visualizations
+    if 'empirical_analysis' in results:
+        # Comprehensive analysis format - extract empirical data
+        empirical_data = results['empirical_analysis']
+        # Add summary information for empirical visualizations
+        if 'combined_assessment' in results:
+            empirical_data['summary'] = results['combined_assessment']
+    else:
+        # Direct empirical analysis format
+        empirical_data = results
+    
+    # Create empirical visualizations (existing functionality)
+    empirical_files = create_distance_visualizations(empirical_data, output_dir)
+    generated_files.extend(empirical_files)
+    
+    # Create theoretical visualizations (new functionality)
+    theoretical_files = create_theoretical_visualizations(results, output_dir)
+    generated_files.extend(theoretical_files)
+    
+    return generated_files

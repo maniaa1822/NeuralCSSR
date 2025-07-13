@@ -1,0 +1,104 @@
+{
+  "experiment_info": {
+    "experiment_name": "biased_neural_cssr_experiment",
+    "total_machines": 6,
+    "machine_specs": [
+      {
+        "complexity_class": "2-state-binary",
+        "machine_count": 2,
+        "topological": true,
+        "description": "Uniform probability machines"
+      },
+      {
+        "complexity_class": "2-state-binary", 
+        "machine_count": 3,
+        "topological": false,
+        "bias_strength": 0.7,
+        "probability_seed": 123,
+        "description": "Random biased probability machines"
+      },
+      {
+        "complexity_class": "3-state-binary",
+        "machine_count": 1,
+        "topological": false,
+        "custom_probabilities": true,
+        "description": "Custom probability machine"
+      }
+    ]
+  },
+  "machine_definitions": {
+    "machine_1": {
+      "machine_id": 1,
+      "complexity_class": "2-state-binary",
+      "states": ["S0", "S1"],
+      "alphabet": ["0", "1"],
+      "is_topological": true,
+      "properties": {
+        "num_states": 2,
+        "alphabet_size": 2,
+        "num_transitions": 4,
+        "statistical_complexity": 1.0,
+        "entropy_rate": 1.0,
+        "period": 1
+      },
+      "transitions": {
+        "S0": {
+          "0": {"next_state": "S0", "probability": 0.5},
+          "1": {"next_state": "S1", "probability": 0.5}
+        },
+        "S1": {
+          "0": {"next_state": "S0", "probability": 0.5},
+          "1": {"next_state": "S1", "probability": 0.5}
+        }
+      },
+      "state_distributions": {
+        "S0": {"0": 0.5, "1": 0.5},
+        "S1": {"0": 0.5, "1": 0.5}
+      }
+    },
+    "machine_10": {
+      "machine_id": 10,
+      "complexity_class": "3-state-binary",
+      "states": ["S0", "S1", "S2"],
+      "alphabet": ["0", "1"],
+      "is_topological": false,
+      "properties": {
+        "num_states": 3,
+        "alphabet_size": 2,
+        "num_transitions": 6,
+        "statistical_complexity": 1.584962500721156,
+        "entropy_rate": 0.8677396647060184,
+        "period": 1
+      },
+      "transitions": {
+        "S0": {
+          "0": {"next_state": "S0", "probability": 0.8},
+          "1": {"next_state": "S1", "probability": 0.2}
+        },
+        "S1": {
+          "0": {"next_state": "S0", "probability": 0.3},
+          "1": {"next_state": "S2", "probability": 0.7}
+        },
+        "S2": {
+          "0": {"next_state": "S0", "probability": 0.5},
+          "1": {"next_state": "S0", "probability": 0.5}
+        }
+      },
+      "state_distributions": {
+        "S0": {"0": 0.8, "1": 0.2},
+        "S1": {"0": 0.3, "1": 0.7},
+        "S2": {"0": 0.5, "1": 0.5}
+      }
+    }
+  },
+  "notes": {
+    "biased_machines": "The 3 biased 2-state machines (bias_strength=0.7, seed=123) would have random probability distributions that deviate from uniform by up to 70%. These can be regenerated using the same enumeration process.",
+    "data_sources": [
+      "datasets/biased_exp/experiment_config.yaml - original configuration",
+      "datasets/biased_exp/ground_truth/machine_properties.json - machine properties",
+      "datasets/biased_exp/statistical_analysis/transition_log.json - actual transition probabilities",
+      "datasets/biased_exp/statistical_analysis/machine_id.json - machine ID mapping"
+    ],
+    "format_explanation": "This format provides complete machine definitions including state transitions, probability distributions, and derived properties. The transitions section shows next_state and probability for each (current_state, symbol) pair. The state_distributions section shows emission probabilities for each state."
+  }
+}

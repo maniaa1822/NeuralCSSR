@@ -17,6 +17,14 @@ from .evaluation_engine import GroundTruthEvaluator
 from .performance_analyzer import PerformanceAnalyzer
 from .results_visualizer import ResultsVisualizer
 
+# Import machine distance analysis
+try:
+    from ..evaluation.machine_distance import MachineDistanceCalculator
+    from ..evaluation.utils.data_loading import load_ground_truth
+    DISTANCE_ANALYSIS_AVAILABLE = True
+except ImportError:
+    DISTANCE_ANALYSIS_AVAILABLE = False
+
 
 class ClassicalCSSRAnalyzer:
     """
@@ -50,7 +58,8 @@ class ClassicalCSSRAnalyzer:
     def run_complete_analysis(self, 
                             max_length: int = 10, 
                             significance_level: float = 0.05,
-                            parameter_sweep: bool = True) -> Dict[str, Any]:
+                            parameter_sweep: bool = True,
+                            distance_analysis: bool = False) -> Dict[str, Any]:
         """
         Run complete classical CSSR analysis pipeline.
         
@@ -58,6 +67,7 @@ class ClassicalCSSRAnalyzer:
             max_length: Maximum history length for CSSR
             significance_level: Statistical significance level
             parameter_sweep: Whether to run parameter sweep analysis
+            distance_analysis: Whether to run machine distance analysis
         
         Returns:
             comprehensive_results: All analysis results and metrics
@@ -88,10 +98,16 @@ class ClassicalCSSRAnalyzer:
         print("Step 5: Analyzing scaling behavior...")
         scaling_analysis = self.analyze_scaling_behavior()
         
-        # Step 6: Generate comprehensive report
-        print("Step 6: Generating analysis report...")
+        # Step 6: Machine distance analysis (optional)
+        distance_results = None
+        if distance_analysis:
+            print("Step 6: Running machine distance analysis...")
+            distance_results = self.run_machine_distance_analysis()
+        
+        # Step 7: Generate comprehensive report
+        print(f"Step {'7' if distance_analysis else '6'}: Generating analysis report...")
         results = self.generate_analysis_report(
-            evaluation_metrics, baseline_comparison, scaling_analysis
+            evaluation_metrics, baseline_comparison, scaling_analysis, distance_results
         )
         
         total_time = time.time() - start_time
@@ -164,7 +180,8 @@ class ClassicalCSSRAnalyzer:
     def generate_analysis_report(self, 
                                evaluation_metrics: Dict, 
                                baseline_comparison: Dict, 
-                               scaling_analysis: Dict) -> Dict[str, Any]:
+                               scaling_analysis: Dict,
+                               distance_results: Optional[Dict] = None) -> Dict[str, Any]:
         """Generate comprehensive analysis report."""
         
         results = {
@@ -174,6 +191,10 @@ class ClassicalCSSRAnalyzer:
             'baseline_comparison': baseline_comparison,
             'scaling_analysis': scaling_analysis
         }
+        
+        # Add distance analysis results if available
+        if distance_results is not None:
+            results['machine_distance_analysis'] = distance_results
         
         # Save JSON results
         results_file = self.output_dir / 'classical_cssr_results.json'
@@ -191,6 +212,68 @@ class ClassicalCSSRAnalyzer:
         }
         
         return results
+    
+    def run_machine_distance_analysis(self) -> Optional[Dict[str, Any]]:
+        """
+        Run machine distance analysis comparing CSSR results to ground truth.
+        
+        Returns:
+            Distance analysis results or None if analysis unavailable
+        """
+        if not DISTANCE_ANALYSIS_AVAILABLE:
+            print("Warning: Machine distance analysis not available (missing dependencies)")
+            return None
+        
+        if not self.cssr_results:
+            print("Warning: No CSSR results available for distance analysis")
+            return None
+            
+        try:
+            # Load ground truth in the format expected by distance analysis
+            print("  Loading ground truth for distance analysis...")
+            ground_truth_machines = load_ground_truth(str(self.dataset_dir))
+            
+            # Create distance calculator
+            calculator = MachineDistanceCalculator()
+            
+            # Compute distances
+            print("  Computing distance metrics...")
+            distance_results = calculator.compute_all_distances(
+                self.cssr_results, ground_truth_machines
+            )
+            
+            # Generate distance analysis report
+            distance_output_dir = self.output_dir / 'machine_distance_analysis'
+            distance_output_dir.mkdir(exist_ok=True)
+            
+            print("  Generating distance analysis report...")
+            report_path = calculator.generate_report(
+                distance_results, 
+                str(distance_output_dir / 'machine_distance_report.md')
+            )
+            
+            # Generate visualizations
+            try:
+                from ..evaluation.utils.visualization import create_distance_visualizations
+                viz_files = create_distance_visualizations(distance_results, str(distance_output_dir))
+                distance_results['visualization_files'] = viz_files
+            except Exception as e:
+                print(f"  Warning: Could not generate distance visualizations: {e}")
+            
+            distance_results['report_path'] = report_path
+            
+            # Print summary
+            summary = distance_results.get('summary', {})
+            print(f"  ✓ Distance analysis complete:")
+            print(f"    Overall Quality: {summary.get('overall_quality_score', 0.0):.3f}")
+            print(f"    Confidence: {summary.get('confidence', 0.0):.3f}")
+            print(f"    Best Metric: {summary.get('best_metric', 'Unknown')}")
+            
+            return distance_results
+            
+        except Exception as e:
+            print(f"Warning: Machine distance analysis failed: {e}")
+            return None
     
     def _extract_dataset_info(self) -> Dict[str, Any]:
         """Extract key dataset information for reporting."""
@@ -231,12 +314,13 @@ class BatchAnalyzer:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
-    def analyze_all_datasets(self, dataset_names: Optional[List[str]] = None) -> Dict[str, Any]:
+    def analyze_all_datasets(self, dataset_names: Optional[List[str]] = None, distance_analysis: bool = False) -> Dict[str, Any]:
         """
         Analyze all datasets in the datasets directory.
         
         Args:
             dataset_names: Specific datasets to analyze, or None for all
+            distance_analysis: Whether to run machine distance analysis
             
         Returns:
             Comparative analysis results across all datasets
@@ -260,7 +344,7 @@ class BatchAnalyzer:
             )
             
             try:
-                dataset_results = analyzer.run_complete_analysis()
+                dataset_results = analyzer.run_complete_analysis(distance_analysis=distance_analysis)
                 results[dataset_name] = dataset_results
             except Exception as e:
                 print(f"Error analyzing {dataset_name}: {e}")
