@@ -1,0 +1,171 @@
+{
+  "states": {
+    "\u03b50": {
+      "name": "\u03b50",
+      "index": 0,
+      "observations": 336
+    },
+    "\u03b51": {
+      "name": "\u03b51",
+      "index": 1,
+      "observations": 160
+    },
+    "\u03b52": {
+      "name": "\u03b52",
+      "index": 2,
+      "observations": 251
+    },
+    "\u03b53": {
+      "name": "\u03b53",
+      "index": 3,
+      "observations": 269
+    },
+    "\u03b54": {
+      "name": "\u03b54",
+      "index": 4,
+      "observations": 129
+    },
+    "\u03b55": {
+      "name": "\u03b55",
+      "index": 5,
+      "observations": 141
+    },
+    "\u03b56": {
+      "name": "\u03b56",
+      "index": 6,
+      "observations": 97
+    },
+    "\u03b57": {
+      "name": "\u03b57",
+      "index": 7,
+      "observations": 152
+    }
+  },
+  "transitions": {
+    "\u03b50": {
+      "0": {
+        "next_state": "\u03b53",
+        "probability": 0.00911854103343465,
+        "count": 3
+      },
+      "1": {
+        "next_state": "\u03b50",
+        "probability": 1.0,
+        "count": 7
+      }
+    },
+    "\u03b51": {
+      "1": {
+        "next_state": "\u03b53",
+        "probability": 0.03125,
+        "count": 5
+      }
+    },
+    "\u03b52": {
+      "0": {
+        "next_state": "\u03b55",
+        "probability": 0.004016064257028112,
+        "count": 1
+      },
+      "1": {
+        "next_state": "\u03b53",
+        "probability": 0.5,
+        "count": 1
+      }
+    },
+    "\u03b53": {
+      "0": {
+        "next_state": "\u03b54",
+        "probability": 0.02247191011235955,
+        "count": 6
+      },
+      "1": {
+        "next_state": "\u03b53",
+        "probability": 1.0,
+        "count": 2
+      }
+    },
+    "\u03b54": {
+      "0": {
+        "next_state": "\u03b53",
+        "probability": 0.05426356589147287,
+        "count": 7
+      }
+    },
+    "\u03b55": {
+      "0": {
+        "next_state": "\u03b54",
+        "probability": 0.06382978723404255,
+        "count": 9
+      }
+    },
+    "\u03b56": {
+      "0": {
+        "next_state": "\u03b55",
+        "probability": 0.21739130434782608,
+        "count": 20
+      },
+      "1": {
+        "next_state": "\u03b54",
+        "probability": 0.2,
+        "count": 1
+      }
+    },
+    "\u03b57": {
+      "1": {
+        "next_state": "\u03b54",
+        "probability": 0.03289473684210526,
+        "count": 5
+      }
+    }
+  },
+  "symbol_emissions": {
+    "\u03b50": {
+      "0": 0.9791666666666666,
+      "1": 0.020833333333333332
+    },
+    "\u03b51": {
+      "0": 0.0,
+      "1": 1.0
+    },
+    "\u03b52": {
+      "0": 0.9920318725099602,
+      "1": 0.00796812749003984
+    },
+    "\u03b53": {
+      "0": 0.9925650557620818,
+      "1": 0.007434944237918215
+    },
+    "\u03b54": {
+      "0": 1.0,
+      "1": 0.0
+    },
+    "\u03b55": {
+      "0": 1.0,
+      "1": 0.0
+    },
+    "\u03b56": {
+      "0": 0.9484536082474226,
+      "1": 0.05154639175257732
+    },
+    "\u03b57": {
+      "0": 0.0,
+      "1": 1.0
+    }
+  },
+  "num_states": 8,
+  "alphabet": [
+    "0",
+    "1"
+  ],
+  "state_names": [
+    "\u03b50",
+    "\u03b51",
+    "\u03b52",
+    "\u03b53",
+    "\u03b54",
+    "\u03b55",
+    "\u03b56",
+    "\u03b57"
+  ]
+}

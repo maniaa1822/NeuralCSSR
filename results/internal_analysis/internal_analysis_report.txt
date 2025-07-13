@@ -1,0 +1,86 @@
+================================================================================
+TRANSFORMER INTERNAL STATE ANALYSIS REPORT
+================================================================================
+
+🔍 ANALYSIS OVERVIEW
+----------------------------------------
+Number of layers analyzed: 3
+Number of sequences: 48
+Model dimension: 10
+
+🎯 HIDDEN STATE CLUSTERING ANALYSIS
+----------------------------------------
+Layer 0:
+  • Number of clusters identified: 8
+  • PCA variance explained (first 2 components): 0.281, 0.260
+  • Total representations: 1584
+  • Cluster distribution: {np.int32(0): np.int64(239), np.int32(1): np.int64(216), np.int32(2): np.int64(192), np.int32(3): np.int64(137), np.int32(4): np.int64(96), np.int32(5): np.int64(336), np.int32(6): np.int64(240), np.int32(7): np.int64(128)}
+
+Layer 1:
+  • Number of clusters identified: 8
+  • PCA variance explained (first 2 components): 0.471, 0.366
+  • Total representations: 1584
+  • Cluster distribution: {np.int32(0): np.int64(126), np.int32(1): np.int64(193), np.int32(2): np.int64(192), np.int32(3): np.int64(240), np.int32(4): np.int64(236), np.int32(5): np.int64(176), np.int32(6): np.int64(194), np.int32(7): np.int64(227)}
+
+Layer 2:
+  • Number of clusters identified: 8
+  • PCA variance explained (first 2 components): 0.736, 0.120
+  • Total representations: 1584
+  • Cluster distribution: {np.int32(0): np.int64(100), np.int32(1): np.int64(160), np.int32(2): np.int64(131), np.int32(3): np.int64(220), np.int32(4): np.int64(154), np.int32(5): np.int64(251), np.int32(6): np.int64(353), np.int32(7): np.int64(215)}
+
+🔄 STATE TRANSITION ANALYSIS
+----------------------------------------
+Layer 0:
+  • State persistence rate: 0.709
+  • Number of transitions observed: 23
+  • Diagonal transition strength: 0.685
+  • Off-diagonal transition strength: 0.045
+
+Layer 1:
+  • State persistence rate: 0.363
+  • Number of transitions observed: 18
+  • Diagonal transition strength: 0.366
+  • Off-diagonal transition strength: 0.091
+
+Layer 2:
+  • State persistence rate: 0.561
+  • Number of transitions observed: 36
+  • Diagonal transition strength: 0.495
+  • Off-diagonal transition strength: 0.072
+
+🔬 PROBING CLASSIFIER RESULTS
+----------------------------------------
+Layer 0:
+  • Token prediction accuracy: 0.8013
+  • Training samples: 1267
+  • Test samples: 317
+
+Layer 1:
+  • Token prediction accuracy: 0.9811
+  • Training samples: 1267
+  • Test samples: 317
+
+Layer 2:
+  • Token prediction accuracy: 0.9842
+  • Training samples: 1267
+  • Test samples: 317
+
+💡 KEY INSIGHTS
+----------------------------------------
+✅ PROGRESSIVE REFINEMENT: Token prediction accuracy improves through layers
+   Layer 0: 0.8013 → Layer 2: 0.9842
+✅ CONSISTENT CLUSTERING: All layers identify 8 clusters
+⚠️  Moderate state persistence: 0.544
+
+🏆 FINAL ASSESSMENT
+----------------------------------------
+✅ Excellent internal representation quality (high probing accuracy)
+✅ Consistent internal clustering across layers
+✅ Balanced state persistence (not too rigid, not too chaotic)
+
+🎯 STRONG EVIDENCE: Transformer has learned structured internal FSM representations
+   - Clear clustering patterns in hidden states
+   - Meaningful state transition dynamics
+   - High-quality information encoding
+
+================================================================================

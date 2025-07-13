@@ -1,0 +1,58 @@
+================================================================================
+TRANSFORMER FSM LEARNING ANALYSIS REPORT
+================================================================================
+
+📊 MODEL PERFORMANCE SUMMARY
+----------------------------------------
+Overall Accuracy: 0.9933
+Mean Sequence Accuracy: 0.9918
+Perfect Sequences: 43684/85499 (51.1%)
+
+🎯 TOKEN-LEVEL ANALYSIS
+----------------------------------------
+Token '0' Accuracy: 0.9989
+Token '1' Accuracy: 0.9811
+
+📈 BASELINE COMPARISONS
+----------------------------------------
+Model Accuracy:     0.9933
+Marginal Baseline:  0.5396 (predict '0')
+Bigram Baseline:    0.5484
+Trigram Baseline:   0.5545
+Random Baseline:    0.5000
+
+🔍 KEY FINDINGS
+----------------------------------------
+✅ BEATS MARGINAL BASELINE by 0.4537 - Strong evidence of structure learning
+✅ HIGH SEQUENCE ACCURACY - Strong evidence of learning sequential patterns
+✅ BEATS N-GRAM BASELINES by 0.4389 - Learning beyond simple patterns
+
+🧠 CONTEXT SENSITIVITY ANALYSIS
+----------------------------------------
+pattern_1: 0.8750 accuracy on [0, 1, 0, 1, 0, 1, 0, 1]
+pattern_2: 1.0000 accuracy on [0, 0, 0, 0, 0, 0, 0, 0]
+pattern_3: 1.0000 accuracy on [1, 1, 1, 1, 1, 1, 1, 1]
+pattern_4: 1.0000 accuracy on [0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0]
+pattern_5: 0.8889 accuracy on [1, 0, 1, 0, 0, 1, 1, 0, 1]
+
+📊 DISTRIBUTION ANALYSIS
+----------------------------------------
+Model Predictions vs Targets:
+  Token '0': Predicted 69.5%, Actual 68.9%
+  Token '1': Predicted 30.5%, Actual 31.1%
+
+🎰 GROUND TRUTH FSM ANALYSIS
+----------------------------------------
+Dataset contains 2 finite state machines
+  Machine 1: 2 states (topological: True)
+  Machine 10: 3 states (topological: False)
+Average states per machine: 2.5
+
+🏆 FINAL VERDICT
+----------------------------------------
+🎯 STRONG EVIDENCE: Model is learning FSM structure, not just marginal distributions
+   - Significantly outperforms all baselines
+   - High sequence-level accuracy indicates structural understanding
+   - Performance suggests capturing state transition dynamics
+
+================================================================================

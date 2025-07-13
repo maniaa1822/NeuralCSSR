@@ -59,16 +59,25 @@ Neural Formatting → Quality Validation → Structured Output
 ├── analyze_machine_distances.py       # Machine distance analysis tool
 ├── plans_and_guides/                  # Comprehensive project documentation
 │   ├── README.md                      # Documentation index
-│   ├── Machine_distances_plan.md      # Original implementation plan
-│   ├── MACHINE_DISTANCES_PLAN_STATUS.md # Implementation status
 │   ├── MACHINE_DISTANCE_README.md     # Distance analysis usage guide
 │   ├── MACHINE_DISTANCE_INTERPRETATION_GUIDE.md # Results interpretation
 │   ├── DISTANCE_ANALYSIS_INTEGRATION.md # Integration documentation
-│   └── neural_cssr_dataset_framework.md # Dataset framework specification
+│   ├── neural_cssr_dataset_framework.md # Dataset framework specification
+│   ├── time_delay_research_plan.md    # Time-delay extension research plan
+│   ├── epsilon_transducer_integration_plan.md # Epsilon-transducer integration
+│   ├── ground_truth_validation_enhancement.md # Ground truth validation improvements
+│   ├── complete_time_delay_neural_cssr_spec.md # Complete time-delay specification
+│   └── completed/                     # Completed implementation plans
+│       ├── Machine_distances_plan.md  # Original distance analysis plan
+│       └── MACHINE_DISTANCES_PLAN_STATUS.md # Implementation status tracking
 ├── pyproject.toml                     # Python project configuration
 ├── uv.lock                           # UV package manager lock file
 ├── datasets/                         # Generated datasets directory
-│   └── small_exp/                    # Example: small experiment
+│   ├── biased_exp/                   # Biased probability experiment (6 machines)
+│   ├── small_exp/                    # Small experiment (5 machines)
+│   ├── classical_cssr_test/          # Classical CSSR testing dataset
+│   ├── mixed_homogeneous/            # Mixed machine types experiment
+│   └── [dataset_name]/               # Standard dataset structure:
 │       ├── raw_sequences/            # Plain text sequences for classical CSSR
 │       ├── neural_format/            # PyTorch datasets (.pt files)
 │       ├── ground_truth/             # Machine definitions & state labels
@@ -119,17 +128,39 @@ Neural Formatting → Quality Validation → Structured Output
 │   │   │   ├── __init__.py
 │   │   │   ├── state_mapping.py     # Hungarian algorithm + JS divergence
 │   │   │   ├── symbol_distribution.py # Symbol distribution analysis
-│   │   │   └── transition_structure.py # Graph-based metrics
+│   │   │   ├── transition_structure.py # Graph-based metrics
+│   │   │   ├── causal_equivalence.py # Causal equivalence analysis
+│   │   │   ├── information_theoretic.py # Information-theoretic metrics
+│   │   │   └── optimality_analysis.py # Optimality analysis metrics
 │   │   └── utils/                   # Distance analysis utilities
 │   │       ├── __init__.py
 │   │       ├── data_loading.py      # CSSR/ground truth loaders
-│   │       └── visualization.py     # Distance visualization suite
+│   │       ├── visualization.py     # Distance visualization suite
+│   │       └── theoretical_visualization.py # Theoretical analysis plots
 │   └── neural/                       # Neural network implementations
-│       └── __init__.py
+│       ├── __init__.py
+│       └── transformer.py            # Transformer implementation
+├── results/                          # Analysis results directory
+│   ├── biased_exp/                   # CSSR analysis results for biased_exp
+│   ├── machine_distance_analysis/    # Distance analysis results
+│   └── [analysis_name]/              # Standard results structure:
+│       ├── classical_cssr_analysis_report.html # Comprehensive HTML report
+│       ├── classical_cssr_results.json # Detailed analysis results
+│       ├── machine_distance_report.md # Distance analysis markdown report
+│       ├── machine_distance_report.json # Distance analysis JSON results
+│       └── *.png                     # Visualization plots
+├── fsm_transformer/                  # FSM Transformer implementation
+│   ├── __init__.py
+│   ├── transformer.py               # Transformer model
+│   ├── data_generator.py            # Data generation utilities
+│   ├── epsilon_machine.py           # Epsilon machine utilities
+│   └── analysis.py                  # Analysis utilities
 └── tests/                            # Test files directory
     └── classical_cssr/               # Classical CSSR tests
         ├── README.md                 # Test documentation
-        └── test_classical_cssr.py    # Main CSSR test script
+        ├── test_classical_cssr.py    # Main CSSR test script
+        ├── analyze_cssr.py           # CSSR analysis utilities
+        └── test_*.py                 # Additional test scripts
 ```
 
 ## Key Implementation Files
@@ -148,9 +179,15 @@ Neural Formatting → Quality Validation → Structured Output
 ### Machine Distance Analysis
 - **Main Analysis Script**: `analyze_machine_distances.py` - Complete distance analysis CLI
 - **Distance Calculator**: `src/neural_cssr/evaluation/machine_distance.py` - Main integration class
-- **State Mapping**: `src/neural_cssr/evaluation/metrics/state_mapping.py` - Hungarian + JS divergence
-- **Symbol Distribution**: `src/neural_cssr/evaluation/metrics/symbol_distribution.py` - Distribution analysis
-- **Transition Structure**: `src/neural_cssr/evaluation/metrics/transition_structure.py` - Graph metrics
+- **Core Metrics**: 
+  - `state_mapping.py` - Hungarian algorithm + Jensen-Shannon divergence
+  - `symbol_distribution.py` - Symbol distribution analysis
+  - `transition_structure.py` - Graph-based connectivity metrics
+- **Advanced Metrics**:
+  - `causal_equivalence.py` - Causal equivalence analysis
+  - `information_theoretic.py` - Information-theoretic measures
+  - `optimality_analysis.py` - Optimality and efficiency analysis
+- **Visualization**: `theoretical_visualization.py` - Enhanced theoretical analysis plots
 
 ## How to Use the Framework
 
@@ -288,12 +325,16 @@ Each generated dataset includes:
 - Statistical analysis automatically detects probability biases
 - Framework correctly handles mixed topological/non-topological datasets
 
-✅ **Machine Distance Analysis System**: Complete quantitative CSSR evaluation framework
-- Implemented 3-metric distance analysis (state mapping, symbol distribution, transition structure)
+✅ **Enhanced Machine Distance Analysis System**: Complete quantitative CSSR evaluation framework
+- Implemented 6-metric comprehensive distance analysis framework:
+  - **Core Metrics**: State mapping (Hungarian + JS), symbol distribution, transition structure
+  - **Advanced Metrics**: Causal equivalence, information-theoretic measures, optimality analysis
 - Hungarian algorithm optimization for optimal state assignments
 - Jensen-Shannon divergence for probability distribution comparison
 - Graph-based metrics for transition structure analysis
-- Professional visualization suite with 4 comprehensive plots
+- Information-theoretic analysis (mutual information, conditional entropy)
+- Causal equivalence detection and optimality assessment
+- Professional visualization suite with 8 comprehensive theoretical plots
 - Automated report generation (Markdown + JSON + visualizations)
 
 ✅ **Complete CSSR Analysis Pipeline**: End-to-end classical CSSR research workflow
@@ -309,6 +350,13 @@ Each generated dataset includes:
 - Overall quality score: 0.766 (Good match) with 0.919 confidence
 - Best parameters identified: L=10, α=0.001 across 16 combinations tested
 - Confirmed CSSR can distinguish between biased and uniform probability machines
+
+✅ **Advanced Theoretical Analysis**: Enhanced machine distance evaluation
+- Information-theoretic analysis with mutual information and conditional entropy measures
+- Causal equivalence detection between ground truth and reconstructed machines
+- Optimality analysis comparing CSSR performance to theoretical bounds
+- Comprehensive theoretical visualization suite with 8 specialized plots
+- Integration of classical and neural CSSR evaluation frameworks
 
 ## Dependencies and Environment
 - **Package Manager**: `uv` (not pip)
@@ -379,11 +427,14 @@ uv sync
 - ✅ Successfully completed unified dataset generation framework
 - ✅ Developed robust configuration-driven generation system  
 - ✅ Implemented comprehensive quality validation
-- ✅ **NEW**: Complete machine distance analysis framework implemented
-- ✅ **NEW**: End-to-end CSSR analysis pipeline with parameter sweep
-- ✅ **NEW**: Validated research workflow on biased_exp dataset
-- ✅ **NEW**: Professional reporting and visualization suite
+- ✅ **ENHANCED**: 6-metric machine distance analysis framework with advanced theoretical analysis
+- ✅ **COMPLETE**: End-to-end CSSR analysis pipeline with parameter sweep
+- ✅ **VALIDATED**: Research workflow on multiple datasets (biased_exp, mixed_homogeneous, etc.)
+- ✅ **PROFESSIONAL**: Comprehensive reporting and 8-plot visualization suite
+- ✅ **ADVANCED**: Information-theoretic, causal equivalence, and optimality analysis
+- ✅ **NEW**: FSM Transformer implementation for neural CSSR research
+- ✅ **ORGANIZED**: Comprehensive documentation and completed plans tracking
 - ✅ Prepared infrastructure for systematic research studies
 
-## Framework Status: Research Ready ✅
-**Complete Neural CSSR Research Platform**: Dataset generation + Classical CSSR analysis + Quantitative evaluation framework. Production-ready with comprehensive metadata, parameter optimization, quality assurance, and professional reporting. Ready for systematic Neural CSSR research, comparative studies, and publication-quality analysis.
+## Framework Status: Advanced Research Platform ✅
+**Complete Neural CSSR Research Ecosystem**: Dataset generation + Classical CSSR analysis + Advanced quantitative evaluation + Neural implementations. Production-ready with comprehensive metadata, parameter optimization, quality assurance, professional reporting, and theoretical analysis capabilities. Ready for advanced Neural CSSR research, comparative studies, scaling law investigations, and publication-quality analysis with full theoretical grounding.
