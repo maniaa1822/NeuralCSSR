@@ -1,0 +1,49 @@
+experiment_name: complex_machines_test
+random_seed: 111
+machine_specs:
+  - complexity_class: '4-state-binary'
+    machine_count: 3
+    samples_per_machine: 1000
+    bias_strength: 0.0
+    topological: true
+    weight: 1.0
+  - complexity_class: '5-state-binary'
+    machine_count: 2
+    samples_per_machine: 1200
+    bias_strength: 0.0
+    topological: true
+    weight: 1.1
+  - complexity_class: '3-state-binary'
+    machine_count: 2
+    samples_per_machine: 800
+    bias_strength: 0.0
+    topological: false
+    weight: 0.8
+
+sequence_spec:
+  total_sequences: 6400
+  length_distribution: [30, 120]
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+neural_format_config:
+  context_length: 256
+  batch_friendly_padding: true
+  include_position_metadata: true
+  vocab_special_tokens:
+    - '<PAD>'
+    - '<UNK>'
+
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false
+
+quality_spec:
+  entropy_tolerance: 0.1
+  min_state_coverage: 25
+  min_transition_coverage: 12
+  length_diversity_threshold: 0.3

@@ -1,0 +1,114 @@
+{
+  "state_mapping_distance": {
+    "optimal_assignment": [],
+    "total_cost": 0.0,
+    "average_cost": 0.0,
+    "per_state_costs": [],
+    "unmatched_discovered_states": [],
+    "unmatched_true_states": [],
+    "assignment_quality": {
+      "quality_score": 0.0,
+      "confidence": 0.0
+    }
+  },
+  "symbol_distribution_distance": {
+    "average_js_divergence": 0.0,
+    "max_js_divergence": 0.0,
+    "min_js_divergence": 0.0,
+    "std_js_divergence": 0.0,
+    "state_mappings": [],
+    "coverage_score": {
+      "total_ground_truth_states": 0,
+      "well_matched_states": 0,
+      "coverage_fraction": 0.0,
+      "unmatched_states": []
+    },
+    "reverse_mappings": [],
+    "quality_assessment": {
+      "overall_quality_score": 0.0,
+      "divergence_quality": 0.0,
+      "coverage_quality": 0.0,
+      "consistency_score": 0.0,
+      "assessment": "No data"
+    }
+  },
+  "transition_structure_distance": {
+    "graph_edit_distance": 0.4076923076923077,
+    "spectral_distance": 0.37416573867739417,
+    "connectivity_similarity": 0.5003244445519864,
+    "transition_coverage": {
+      "coverage_ratio": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "discovered_edges": 5,
+      "ground_truth_edges": 13,
+      "overlapping_edges": 0
+    },
+    "structural_comparison": {
+      "num_nodes": {
+        "discovered": 4,
+        "ground_truth": 5,
+        "similarity": 0.8
+      },
+      "num_edges": {
+        "discovered": 5,
+        "ground_truth": 13,
+        "similarity": 0.3846153846153846
+      },
+      "density": {
+        "discovered": 0.4166666666666667,
+        "ground_truth": 0.65,
+        "similarity": 0.7666666666666666
+      },
+      "is_strongly_connected": {
+        "discovered": false,
+        "ground_truth": false,
+        "similarity": 1.0
+      },
+      "num_strongly_connected_components": {
+        "discovered": 4,
+        "ground_truth": 2,
+        "similarity": 0.5
+      },
+      "avg_clustering": {
+        "discovered": 0.0,
+        "ground_truth": 0.6,
+        "similarity": 0.4
+      }
+    }
+  },
+  "summary": {
+    "overall_distance_score": 0.8748331477354788,
+    "overall_quality_score": 0.12516685226452115,
+    "best_metric": "transition_structure",
+    "confidence": 0.3741657386773942,
+    "metric_scores": {
+      "symbol_distribution": 0.0,
+      "state_mapping": 0.0,
+      "transition_structure": 0.6258342613226058
+    },
+    "interpretation": {
+      "overall_quality": "Very poor match - Little to no correspondence with ground truth",
+      "confidence_level": "Very low confidence - Conflicting results across metrics",
+      "strongest_correspondence": "Graph connectivity patterns show the strongest correspondence"
+    },
+    "recommendations": [
+      "Poor symbol distribution match suggests CSSR parameters may need adjustment (try different significance levels or history lengths)",
+      "Low coverage (0.0%) indicates CSSR may have missed some ground truth states - consider increasing sequence length or adjusting parameters"
+    ]
+  },
+  "metadata": {
+    "computation_timestamp": "2025-07-13T16:51:47.771324",
+    "discovered_machine_info": {
+      "format": "direct_states",
+      "num_states": 4,
+      "has_transitions": true,
+      "parameter_sets": 0
+    },
+    "ground_truth_machine_count": 2,
+    "ground_truth_machine_ids": [
+      "1",
+      "10"
+    ]
+  }
+}

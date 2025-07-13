@@ -1,0 +1,43 @@
+experiment_name: extreme_long_sequences
+random_seed: 456
+machine_specs:
+  - complexity_class: '4-state-binary'
+    machine_count: 3
+    samples_per_machine: 800
+    bias_strength: 0.0
+    topological: true
+    weight: 1.0
+  - complexity_class: '5-state-binary'
+    machine_count: 2
+    samples_per_machine: 600
+    bias_strength: 0.0
+    topological: false
+    weight: 1.2
+
+sequence_spec:
+  total_sequences: 3600
+  length_distribution: [200, 500]  # Much longer sequences
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+neural_format_config:
+  context_length: 512
+  batch_friendly_padding: true
+  include_position_metadata: true
+  vocab_special_tokens:
+    - '<PAD>'
+    - '<UNK>'
+
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false
+
+quality_spec:
+  entropy_tolerance: 0.1
+  min_state_coverage: 20
+  min_transition_coverage: 10
+  length_diversity_threshold: 0.4

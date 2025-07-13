@@ -1,0 +1,339 @@
+{
+  "state_mapping_distance": {
+    "optimal_assignment": [
+      {
+        "discovered_state": "State_0",
+        "ground_truth_state": "1_S0",
+        "machine_id": "1",
+        "state_id": "S0",
+        "cost": 0.015629864818827686,
+        "discovered_distribution": {
+          "0": 0.5220976678263111,
+          "1": 0.47790233217368894
+        },
+        "ground_truth_distribution": {
+          "0": 0.5,
+          "1": 0.5
+        }
+      },
+      {
+        "discovered_state": "State_1",
+        "ground_truth_state": "10_S2",
+        "machine_id": "10",
+        "state_id": "S2",
+        "cost": 0.18811765805807126,
+        "discovered_distribution": {
+          "0": 0.7552533992583437,
+          "1": 0.24474660074165636
+        },
+        "ground_truth_distribution": {
+          "0": 0.5,
+          "1": 0.5
+        }
+      },
+      {
+        "discovered_state": "State_2",
+        "ground_truth_state": "10_S1",
+        "machine_id": "10",
+        "state_id": "S1",
+        "cost": 0.08861780121575336,
+        "discovered_distribution": {
+          "0": 0.19236417033773862,
+          "1": 0.8076358296622613
+        },
+        "ground_truth_distribution": {
+          "0": 0.3,
+          "1": 0.7
+        }
+      },
+      {
+        "discovered_state": "State_3",
+        "ground_truth_state": "1_S1",
+        "machine_id": "1",
+        "state_id": "S1",
+        "cost": 0.464501404022459,
+        "discovered_distribution": {
+          "1": 1.0
+        },
+        "ground_truth_distribution": {
+          "0": 0.5,
+          "1": 0.5
+        }
+      },
+      {
+        "discovered_state": "State_4",
+        "ground_truth_state": "10_S0",
+        "machine_id": "10",
+        "state_id": "S0",
+        "cost": 0.1637857851315061,
+        "discovered_distribution": {
+          "0": 0.9490196078431372,
+          "1": 0.050980392156862744
+        },
+        "ground_truth_distribution": {
+          "0": 0.8,
+          "1": 0.2
+        }
+      }
+    ],
+    "total_cost": 0.9206525132466175,
+    "average_cost": 0.18413050264932349,
+    "per_state_costs": [
+      0.015629864818827686,
+      0.18811765805807126,
+      0.08861780121575336,
+      0.464501404022459,
+      0.1637857851315061
+    ],
+    "unmatched_discovered_states": [],
+    "unmatched_true_states": [],
+    "assignment_quality": {
+      "quality_score": 0.8158694973506765,
+      "confidence": 0.8675450037297646
+    }
+  },
+  "symbol_distribution_distance": {
+    "average_js_divergence": 0.12971209230458175,
+    "max_js_divergence": 0.3424572043022955,
+    "min_js_divergence": 0.015629864818827686,
+    "std_js_divergence": 0.11791802511840606,
+    "state_mappings": [
+      {
+        "discovered_state": "State_0",
+        "best_match": {
+          "machine_id": "1",
+          "state_id": "S0",
+          "full_name": "1_S0"
+        },
+        "js_divergence": 0.015629864818827686,
+        "distance_rank": 1,
+        "discovered_distribution": {
+          "0": 0.5220976678263111,
+          "1": 0.47790233217368894
+        },
+        "matched_distribution": {
+          "0": 0.5,
+          "1": 0.5
+        },
+        "discovered_observations": 38805,
+        "discovered_entropy": 0.9985905850191075
+      },
+      {
+        "discovered_state": "State_1",
+        "best_match": {
+          "machine_id": "10",
+          "state_id": "S0",
+          "full_name": "10_S0"
+        },
+        "js_divergence": 0.038069806054526034,
+        "distance_rank": 1,
+        "discovered_distribution": {
+          "0": 0.7552533992583437,
+          "1": 0.24474660074165636
+        },
+        "matched_distribution": {
+          "0": 0.8,
+          "1": 0.2
+        },
+        "discovered_observations": 6472,
+        "discovered_entropy": 0.8028450062309584
+      },
+      {
+        "discovered_state": "State_2",
+        "best_match": {
+          "machine_id": "10",
+          "state_id": "S1",
+          "full_name": "10_S1"
+        },
+        "js_divergence": 0.08861780121575336,
+        "distance_rank": 1,
+        "discovered_distribution": {
+          "0": 0.19236417033773862,
+          "1": 0.8076358296622613
+        },
+        "matched_distribution": {
+          "0": 0.3,
+          "1": 0.7
+        },
+        "discovered_observations": 681,
+        "discovered_entropy": 0.7063910058857599
+      },
+      {
+        "discovered_state": "State_3",
+        "best_match": {
+          "machine_id": "10",
+          "state_id": "S1",
+          "full_name": "10_S1"
+        },
+        "js_divergence": 0.3424572043022955,
+        "distance_rank": 1,
+        "discovered_distribution": {
+          "1": 1.0
+        },
+        "matched_distribution": {
+          "0": 0.3,
+          "1": 0.7
+        },
+        "discovered_observations": 101,
+        "discovered_entropy": 0.0
+      },
+      {
+        "discovered_state": "State_4",
+        "best_match": {
+          "machine_id": "10",
+          "state_id": "S0",
+          "full_name": "10_S0"
+        },
+        "js_divergence": 0.1637857851315061,
+        "distance_rank": 1,
+        "discovered_distribution": {
+          "0": 0.9490196078431372,
+          "1": 0.050980392156862744
+        },
+        "matched_distribution": {
+          "0": 0.8,
+          "1": 0.2
+        },
+        "discovered_observations": 510,
+        "discovered_entropy": 0.29054708487342246
+      }
+    ],
+    "coverage_score": {
+      "total_ground_truth_states": 5,
+      "well_matched_states": 3,
+      "coverage_fraction": 0.6,
+      "unmatched_states": [
+        "1_S1",
+        "10_S2"
+      ]
+    },
+    "reverse_mappings": [
+      {
+        "ground_truth_state": "1_S0",
+        "machine_id": "1",
+        "state_id": "S0",
+        "best_discovered_match": "State_0",
+        "js_divergence": 0.015629864818827686,
+        "has_match": true
+      },
+      {
+        "ground_truth_state": "1_S1",
+        "machine_id": "1",
+        "state_id": "S1",
+        "best_discovered_match": null,
+        "js_divergence": Infinity,
+        "has_match": false
+      },
+      {
+        "ground_truth_state": "10_S0",
+        "machine_id": "10",
+        "state_id": "S0",
+        "best_discovered_match": "State_1",
+        "js_divergence": 0.038069806054526034,
+        "has_match": true
+      },
+      {
+        "ground_truth_state": "10_S1",
+        "machine_id": "10",
+        "state_id": "S1",
+        "best_discovered_match": "State_2",
+        "js_divergence": 0.08861780121575336,
+        "has_match": true
+      },
+      {
+        "ground_truth_state": "10_S2",
+        "machine_id": "10",
+        "state_id": "S2",
+        "best_discovered_match": null,
+        "js_divergence": Infinity,
+        "has_match": false
+      }
+    ],
+    "quality_assessment": {
+      "overall_quality_score": 0.7351439538477091,
+      "divergence_quality": 0.8702879076954182,
+      "coverage_quality": 0.6,
+      "consistency_score": 0.8945199715283985,
+      "assessment": "Good match"
+    }
+  },
+  "transition_structure_distance": {
+    "graph_edit_distance": 0.24,
+    "spectral_distance": 0.23145502494313783,
+    "connectivity_similarity": 0.38006803429557623,
+    "transition_coverage": {
+      "coverage_ratio": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "discovered_edges": 25,
+      "ground_truth_edges": 13,
+      "overlapping_edges": 0
+    },
+    "structural_comparison": {
+      "num_nodes": {
+        "discovered": 5,
+        "ground_truth": 5,
+        "similarity": 1.0
+      },
+      "num_edges": {
+        "discovered": 25,
+        "ground_truth": 13,
+        "similarity": 0.52
+      },
+      "density": {
+        "discovered": 1.25,
+        "ground_truth": 0.65,
+        "similarity": 0.52
+      },
+      "is_strongly_connected": {
+        "discovered": true,
+        "ground_truth": false,
+        "similarity": 0.0
+      },
+      "num_strongly_connected_components": {
+        "discovered": 1,
+        "ground_truth": 2,
+        "similarity": 0.5
+      },
+      "avg_clustering": {
+        "discovered": 1.0,
+        "ground_truth": 0.6,
+        "similarity": 0.6
+      }
+    }
+  },
+  "summary": {
+    "overall_distance_score": 0.23395817885957004,
+    "overall_quality_score": 0.76604182114043,
+    "best_metric": "state_mapping",
+    "confidence": 0.9192744564970327,
+    "metric_scores": {
+      "symbol_distribution": 0.7351439538477091,
+      "state_mapping": 0.8158694973506765,
+      "transition_structure": 0.7685449750568621
+    },
+    "interpretation": {
+      "overall_quality": "Good match - CSSR shows strong correspondence with ground truth",
+      "confidence_level": "High confidence - All metrics agree on the assessment",
+      "strongest_correspondence": "State-to-state mappings show the strongest correspondence"
+    },
+    "recommendations": [
+      "Low coverage (60.0%) indicates CSSR may have missed some ground truth states - consider increasing sequence length or adjusting parameters",
+      "Poor transition structure match - consider analyzing longer sequences to better capture state transition patterns"
+    ]
+  },
+  "metadata": {
+    "computation_timestamp": "2025-06-30T18:02:44.368701",
+    "discovered_machine_info": {
+      "format": "cssr_results",
+      "num_states": 5,
+      "has_transitions": true,
+      "parameter_sets": 16
+    },
+    "ground_truth_machine_count": 2,
+    "ground_truth_machine_ids": [
+      "1",
+      "10"
+    ]
+  }
+}

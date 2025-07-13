@@ -1,0 +1,84 @@
+{
+  "state_mapping_distance": {
+    "optimal_assignment": [],
+    "total_cost": 0.0,
+    "average_cost": 0.0,
+    "per_state_costs": [],
+    "unmatched_discovered_states": [],
+    "unmatched_true_states": [],
+    "assignment_quality": {
+      "quality_score": 0.0,
+      "confidence": 0.0
+    }
+  },
+  "symbol_distribution_distance": {
+    "average_js_divergence": 0.0,
+    "max_js_divergence": 0.0,
+    "min_js_divergence": 0.0,
+    "std_js_divergence": 0.0,
+    "state_mappings": [],
+    "coverage_score": {
+      "total_ground_truth_states": 0,
+      "well_matched_states": 0,
+      "coverage_fraction": 0.0,
+      "unmatched_states": []
+    },
+    "reverse_mappings": [],
+    "quality_assessment": {
+      "overall_quality_score": 0.0,
+      "divergence_quality": 0.0,
+      "coverage_quality": 0.0,
+      "consistency_score": 0.0,
+      "assessment": "No data"
+    }
+  },
+  "transition_structure_distance": {
+    "graph_edit_distance": 1.0,
+    "spectral_distance": 1.0,
+    "connectivity_similarity": 0.0,
+    "transition_coverage": {
+      "coverage_ratio": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "discovered_edges": 0,
+      "ground_truth_edges": 0,
+      "overlapping_edges": 0
+    },
+    "structural_comparison": {}
+  },
+  "summary": {
+    "overall_distance_score": 1.0,
+    "overall_quality_score": 0.0,
+    "best_metric": "symbol_distribution",
+    "confidence": 1.0,
+    "metric_scores": {
+      "symbol_distribution": 0.0,
+      "state_mapping": 0.0,
+      "transition_structure": 0.0
+    },
+    "interpretation": {
+      "overall_quality": "Very poor match - Little to no correspondence with ground truth",
+      "confidence_level": "High confidence - All metrics agree on the assessment",
+      "strongest_correspondence": "Symbol emission patterns show the strongest correspondence"
+    },
+    "recommendations": [
+      "Poor symbol distribution match suggests CSSR parameters may need adjustment (try different significance levels or history lengths)",
+      "Low coverage (0.0%) indicates CSSR may have missed some ground truth states - consider increasing sequence length or adjusting parameters",
+      "Poor transition structure match - consider analyzing longer sequences to better capture state transition patterns"
+    ]
+  },
+  "metadata": {
+    "computation_timestamp": "2025-06-30T18:18:50.443880",
+    "discovered_machine_info": {
+      "format": "unknown",
+      "num_states": 0,
+      "has_transitions": false,
+      "parameter_sets": 0
+    },
+    "ground_truth_machine_count": 2,
+    "ground_truth_machine_ids": [
+      "1",
+      "10"
+    ]
+  }
+}

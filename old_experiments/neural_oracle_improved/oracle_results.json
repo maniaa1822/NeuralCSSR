@@ -1,0 +1,9 @@
+{
+  "accuracy": 0.5490541934233993,
+  "perplexity": 50.42056000027998,
+  "total_predictions": 4387525,
+  "correct_predictions": 2408989,
+  "cache_hits": 4317330,
+  "cache_misses": 70195,
+  "cache_hit_rate": 0.9840012307622179
+}
