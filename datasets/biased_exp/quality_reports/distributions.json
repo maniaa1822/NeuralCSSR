@@ -1,29 +1,29 @@
 {
-  "overall_score": 0.9999986906142379,
+  "overall_score": 0.9879529923617616,
   "issues": [],
   "entropy_validation": {
-    "score": 0.9999960718427137,
+    "score": 0.9638589770852848,
     "issues": [],
     "comparisons": {
-      "0": {
-        "theoretical": 1.0,
-        "empirical": 0.999997240778304,
-        "relative_error": 2.759221696013725e-06
-      },
       "1": {
         "theoretical": 1.0,
-        "empirical": 0.9999949029071235,
-        "relative_error": 5.097092876549247e-06
+        "empirical": 0.9999979150277816,
+        "relative_error": 2.084972218430181e-06
+      },
+      "10": {
+        "theoretical": 0.8677396647060184,
+        "empirical": 0.805019475706817,
+        "relative_error": 0.07227996085721214
       }
     },
-    "mean_consistency": 0.9999960718427137
+    "mean_consistency": 0.9638589770852848
   },
   "symbol_validation": {
     "score": 1.0,
     "issues": [],
     "symbol_frequencies": {
-      "1": 0.5001290344633106,
-      "0": 0.49987096553668936
+      "0": 0.5441081966306887,
+      "1": 0.45589180336931134
     },
     "expected_frequency": 0.5,
     "balance_score": 1.0
@@ -32,12 +32,12 @@
     "score": 1.0,
     "issues": [],
     "machine_counts": {
-      "0": 3500,
-      "1": 3000
+      "1": 5000,
+      "10": 1500
     },
     "machine_frequencies": {
-      "0": 0.5384615384615384,
-      "1": 0.46153846153846156
+      "1": 0.7692307692307693,
+      "10": 0.23076923076923078
     },
     "balance_score": 1.0
   }

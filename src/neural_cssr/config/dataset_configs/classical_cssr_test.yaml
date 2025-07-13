@@ -1,0 +1,45 @@
+experiment_name: "classical_cssr_test"
+
+# Single machine configuration optimized for Classical CSSR
+machine_specs:
+  # Single 3-state binary machine with strong bias for clear structure
+  - complexity_class: "3-state-binary"
+    machine_count: 1                    # Single machine only
+    samples_per_machine: 2000          # Moderate sample count for faster generation
+    topological: false                 # Non-uniform transition probabilities
+    bias_strength: 0.8                 # Strong bias for clear state differentiation
+    probability_seed: 12345            # Reproducible bias generation
+    weight: 1.0
+
+# Sequence configuration for CSSR optimization
+sequence_spec:
+  total_sequences: 2000
+  length_distribution: [100, 200]      # Longer sequences for better structure discovery
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+# Neural format settings
+neural_format_config:
+  context_length: 256
+  batch_friendly_padding: true
+  include_position_metadata: true
+  vocab_special_tokens: ["<PAD>", "<UNK>"]
+
+# Output configuration
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false
+
+# Quality validation
+quality_spec:
+  min_state_coverage: 100              # Higher coverage requirement
+  min_transition_coverage: 50
+  length_diversity_threshold: 0.3
+  entropy_tolerance: 0.1
+
+# Reproducibility
+random_seed: 12345

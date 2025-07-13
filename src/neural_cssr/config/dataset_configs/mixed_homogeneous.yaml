@@ -1,0 +1,54 @@
+experiment_name: "mixed_homogeneous"
+
+# Multiple 2-state machines with different biases - same complexity, different behaviors
+machine_specs:
+  # Group 1: Strong bias machines
+  - complexity_class: "2-state-binary"
+    machine_count: 3
+    samples_per_machine: 800
+    topological: false
+    bias_strength: 0.8                 # Strong bias for clear differentiation
+    probability_seed: 3001
+    weight: 1.0
+
+  # Group 2: Moderate bias machines
+  - complexity_class: "2-state-binary"
+    machine_count: 2
+    samples_per_machine: 800
+    topological: false
+    bias_strength: 0.6                 # Moderate bias
+    probability_seed: 3002
+    weight: 1.0
+
+# Sequence configuration optimized for mixed machine detection
+sequence_spec:
+  total_sequences: 4000
+  length_distribution: [60, 140]      # Moderate length for pattern detection
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+# Neural format settings
+neural_format_config:
+  context_length: 256
+  batch_friendly_padding: true
+  include_position_metadata: true
+  vocab_special_tokens: ["<PAD>", "<UNK>"]
+
+# Output configuration
+output_config:
+  save_raw_sequences: true
+  save_neural_format: true
+  save_statistical_analysis: true
+  save_quality_reports: true
+  compress_outputs: false
+
+# Quality validation - adjusted for mixed machines
+quality_spec:
+  min_state_coverage: 60              # Lower requirement for mixed scenarios
+  min_transition_coverage: 30
+  length_diversity_threshold: 0.3
+  entropy_tolerance: 0.08             # More tolerant for mixed distributions
+
+# Reproducibility
+random_seed: 3003
