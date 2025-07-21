@@ -4,12 +4,39 @@ Unified Neural CSSR Dataset Generation Script
 
 This script generates datasets using the new unified framework with
 comprehensive metadata, quality validation, and multiple output formats.
+Supports both enumeration-based generation (many short sequences from multiple machines)
+and single machine generation (few very long sequences from specific machines).
 
-Usage:
-    python generate_unified_dataset.py --config <config_file> --output <output_dir>
-    python generate_unified_dataset.py --preset small --output datasets/small_exp
-    python generate_unified_dataset.py --preset medium --output datasets/medium_exp
-    python generate_unified_dataset.py --biased --output datasets/biased_exp
+Usage Examples:
+
+  # Enumeration-based generation (standard datasets)
+  python generate_unified_dataset.py --preset small --output datasets/small_exp
+  python generate_unified_dataset.py --preset medium --output datasets/medium_exp
+  python generate_unified_dataset.py --preset large --output datasets/large_exp
+  python generate_unified_dataset.py --preset biased --output datasets/biased_exp
+  
+  # Single machine generation (individual machine analysis)
+  python generate_unified_dataset.py --preset transcssr --output datasets/single_machines
+  
+  # Custom configuration
+  python generate_unified_dataset.py --config custom_config.yaml --output datasets/custom_exp
+  
+  # Preview configuration without generating
+  python generate_unified_dataset.py --preset medium --output /tmp --dry-run
+
+Available Presets:
+  - small: 5 machines, 2.5K sequences, uniform probabilities (fast testing)
+  - medium: 16 machines, 25K sequences, uniform probabilities (standard research)  
+  - large: 33 machines, 122K sequences, uniform probabilities (comprehensive studies)
+  - biased: 6 machines, 6.5K sequences, mixed uniform/biased probabilities (bias studies)
+  - transcssr: 6 machines, long sequences (50K-75K), single machine generation mode
+
+Single Machine Generation:
+  The 'transcssr' preset generates individual machines without enumeration:
+  - One very long sequence per machine (50,000-75,000 symbols)
+  - Steady-state generation with burn-in period
+  - Compatible with classical CSSR tools like transCSSR
+  - Ideal for individual machine analysis and classical CSSR comparison
 """
 
 import argparse
