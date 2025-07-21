@@ -241,6 +241,70 @@ def create_preset_configs() -> Dict[str, Dict[str, Any]]:
                 'save_quality_reports': True,
                 'compress_outputs': True
             }
+        },
+        
+        'transcssr': {
+            'experiment_name': 'transcssr_compatible_biased',
+            'random_seed': 42,
+            'machine_specs': [
+                {
+                    'complexity_class': '2-state-binary',
+                    'machine_count': 2,
+                    'samples_per_machine': 1,
+                    'weight': 1.0,
+                    'topological': False,
+                    'bias_strength': 0.7,
+                    'probability_seed': 42
+                },
+                {
+                    'complexity_class': '3-state-binary',
+                    'machine_count': 3,
+                    'samples_per_machine': 1,
+                    'weight': 1.0,
+                    'topological': False,
+                    'custom_probabilities': {
+                        'S0': {'0': 0.8, '1': 0.2},
+                        'S1': {'0': 0.3, '1': 0.7},
+                        'S2': {'0': 0.5, '1': 0.5}
+                    }
+                },
+                {
+                    'complexity_class': '2-state-binary',
+                    'machine_count': 1,
+                    'samples_per_machine': 1,
+                    'weight': 1.0,
+                    'topological': True
+                }
+            ],
+            'sequence_spec': {
+                'length_distribution': [50000, 75000],
+                'total_sequences': 6,
+                'train_ratio': 0.7,
+                'val_ratio': 0.15,
+                'test_ratio': 0.15,
+                'use_steady_state': True,
+                'burn_in_length': 20,
+                'contiguous_mode': True
+            },
+            'quality_spec': {
+                'min_state_coverage': 100,
+                'min_transition_coverage': 50,
+                'entropy_tolerance': 0.05,
+                'length_diversity_threshold': 0.2
+            },
+            'neural_format_config': {
+                'context_length': 512,
+                'vocab_special_tokens': ['<PAD>', '<UNK>'],
+                'include_position_metadata': True,
+                'batch_friendly_padding': True
+            },
+            'output_config': {
+                'save_raw_sequences': True,
+                'save_neural_format': True,
+                'save_statistical_analysis': True,
+                'save_quality_reports': True,
+                'compress_outputs': False
+            }
         }
     }
     
@@ -349,7 +413,7 @@ def main():
     config_group.add_argument('--config', '-c', 
                              help='Path to YAML configuration file')
     config_group.add_argument('--preset', '-p', 
-                             choices=['small', 'medium', 'large', 'biased'],
+                             choices=['small', 'medium', 'large', 'biased', 'transcssr'],
                              help='Use predefined configuration preset')
     
     # Output options

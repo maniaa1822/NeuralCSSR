@@ -36,7 +36,9 @@ class SequenceProcessor:
         machine: EpsilonMachine, 
         num_sequences: int,
         length_distribution: Tuple[int, int],
-        track_states: bool = True
+        track_states: bool = True,
+        use_steady_state: bool = False,
+        burn_in_length: int = 0
     ) -> Dict[str, Any]:
         """
         Generate sequences from a single machine with complete metadata.
@@ -46,6 +48,8 @@ class SequenceProcessor:
             num_sequences: Number of sequences to generate
             length_distribution: (min_length, max_length) for sequence lengths
             track_states: Whether to track state trajectories
+            use_steady_state: Whether to start sequences from steady-state distribution
+            burn_in_length: Number of symbols to discard at beginning (≥ 2 × L_max)
             
         Returns:
             Dictionary containing:
@@ -67,14 +71,18 @@ class SequenceProcessor:
             # Generate sequence with tracking
             if track_states:
                 seq_data = self._generate_sequence_with_tracking(
-                    machine, sequence_length, seq_idx
+                    machine, sequence_length, seq_idx, use_steady_state, burn_in_length
                 )
                 sequences.append(seq_data['sequence'])
                 state_trajectories.append(seq_data['states'])
                 transition_log.append(seq_data['transitions'])
             else:
                 # Faster generation without tracking
-                sequence = machine.generate_sequence(sequence_length)
+                sequence = machine.generate_sequence(
+                    sequence_length, 
+                    use_steady_state=use_steady_state,
+                    burn_in=burn_in_length
+                )
                 sequences.append(sequence)
                 state_trajectories.append([])
                 transition_log.append([])
@@ -95,7 +103,9 @@ class SequenceProcessor:
         self, 
         machine: EpsilonMachine, 
         length: int, 
-        sequence_id: int
+        sequence_id: int,
+        use_steady_state: bool = False,
+        burn_in_length: int = 0
     ) -> Dict[str, Any]:
         """
         Generate single sequence with complete state and transition tracking.
@@ -104,6 +114,8 @@ class SequenceProcessor:
             machine: EpsilonMachine to use
             length: Sequence length
             sequence_id: Unique sequence identifier
+            use_steady_state: Whether to start from steady-state distribution
+            burn_in_length: Number of symbols to discard at beginning
             
         Returns:
             Dictionary with sequence, states, and transition details
@@ -112,11 +124,25 @@ class SequenceProcessor:
         states = []
         transitions = []
         
-        # Start from initial state
-        current_state = machine.start_state
+        # Choose starting state
+        if use_steady_state:
+            stationary_dist = machine.compute_stationary_distribution()
+            states_list = list(machine.states)
+            probs = [stationary_dist.get(state, 0) for state in states_list]
+            if sum(probs) > 0:
+                probs = np.array(probs) / sum(probs)
+                current_state = np.random.choice(states_list, p=probs)
+            else:
+                current_state = machine.start_state
+        else:
+            current_state = machine.start_state
+            
         states.append(current_state)
         
-        for step in range(length):
+        # Generate sequence with burn-in
+        total_length = length + burn_in_length
+        
+        for step in range(total_length):
             # Get available transitions from current state
             available_transitions = []
             for symbol in machine.alphabet:
@@ -155,6 +181,12 @@ class SequenceProcessor:
             current_state = chosen_transition['next_state']
             states.append(current_state)
             transitions.append(transition_info)
+        
+        # Remove burn-in from results
+        if burn_in_length > 0:
+            sequence = sequence[burn_in_length:]
+            states = states[burn_in_length:]
+            transitions = transitions[burn_in_length:]
             
         return {
             'sequence': sequence,

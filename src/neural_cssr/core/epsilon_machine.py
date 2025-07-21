@@ -89,16 +89,42 @@ class EpsilonMachine:
                     
         return dict(probs)
         
-    def generate_sequence(self, length: int, start_state: Optional[str] = None) -> List[str]:
-        """Generate a sequence from the epsilon machine."""
+    def generate_sequence(self, length: int, start_state: Optional[str] = None, 
+                         burn_in: int = 0, use_steady_state: bool = False) -> List[str]:
+        """Generate a sequence from the epsilon machine.
+        
+        Args:
+            length: Length of sequence to generate
+            start_state: Starting state (if None, uses start_state or steady-state)
+            burn_in: Number of symbols to discard at the beginning
+            use_steady_state: If True, start from steady-state distribution
+        """
         if not self.states:
             raise ValueError("Machine has no states")
+        
+        # Choose starting state
+        if start_state is not None:
+            current = start_state
+        elif use_steady_state:
+            # Sample from stationary distribution
+            stationary_dist = self.compute_stationary_distribution()
+            states_list = list(self.states)
+            probs = [stationary_dist.get(state, 0) for state in states_list]
+            if sum(probs) == 0:
+                current = self.start_state
+            else:
+                probs = np.array(probs)
+                probs = probs / probs.sum()  # Normalize
+                current = np.random.choice(states_list, p=probs)
+        else:
+            current = self.start_state
             
-        current = start_state or self.start_state
+        # Generate sequence with burn-in
+        total_length = length + burn_in
         sequence = []
         
-        for _ in range(length):
-            # FIX: Get all outgoing transitions from current state
+        for _ in range(total_length):
+            # Get all outgoing transitions from current state
             outgoing_transitions = []
             
             for symbol in self.alphabet:
@@ -110,7 +136,7 @@ class EpsilonMachine:
             if not outgoing_transitions:
                 break
                 
-            # Sample transition based on topological probabilities
+            # Sample transition based on probabilities
             total_prob = sum(prob for _, _, prob in outgoing_transitions)
             if total_prob == 0:
                 break
@@ -124,8 +150,9 @@ class EpsilonMachine:
                     sequence.append(symbol)
                     current = next_state
                     break
-                    
-        return sequence
+        
+        # Remove burn-in symbols
+        return sequence[burn_in:] if burn_in > 0 else sequence
         
     def compute_causal_state(self, history: List[str]) -> Optional[str]:
         """Compute the causal state for a given history."""
@@ -289,6 +316,60 @@ class EpsilonMachine:
                             next_state = existing_transitions[0][0]
                             self.transitions[key] = [(next_state, prob)]
 
+    def compute_stationary_distribution(self) -> Dict[str, float]:
+        """
+        Compute the stationary distribution of the epsilon machine.
+        
+        Returns:
+            Dictionary mapping states to their stationary probabilities
+        """
+        if not self.states:
+            return {}
+            
+        # Build transition matrix
+        states_list = sorted(list(self.states))
+        n_states = len(states_list)
+        state_to_idx = {state: i for i, state in enumerate(states_list)}
+        
+        # Initialize transition matrix
+        transition_matrix = np.zeros((n_states, n_states))
+        
+        # Fill transition matrix
+        for state in states_list:
+            state_idx = state_to_idx[state]
+            
+            # Get total emission probability for this state
+            total_emission = 0.0
+            for symbol in self.alphabet:
+                key = (state, symbol)
+                if key in self.transitions:
+                    for next_state, prob in self.transitions[key]:
+                        next_idx = state_to_idx[next_state]
+                        transition_matrix[state_idx, next_idx] += prob
+                        total_emission += prob
+            
+            # Normalize row if needed
+            if total_emission > 0:
+                transition_matrix[state_idx, :] /= total_emission
+        
+        # Compute stationary distribution using eigenvalue decomposition
+        try:
+            eigenvalues, eigenvectors = np.linalg.eig(transition_matrix.T)
+            
+            # Find eigenvalue closest to 1
+            stationary_idx = np.argmin(np.abs(eigenvalues - 1.0))
+            stationary_vec = np.real(eigenvectors[:, stationary_idx])
+            
+            # Normalize to get probabilities
+            stationary_vec = np.abs(stationary_vec)
+            stationary_vec /= stationary_vec.sum()
+            
+            return {state: prob for state, prob in zip(states_list, stationary_vec)}
+        except:
+            # Fallback to uniform distribution
+            uniform_prob = 1.0 / n_states
+            return {state: uniform_prob for state in states_list}
+    
     def get_statistical_complexity(self) -> float:
         """
         Compute statistical complexity (entropy of the stationary distribution).
@@ -296,11 +377,18 @@ class EpsilonMachine:
         Returns:
             Statistical complexity in bits
         """
-        # For now, return log2 of number of states as approximation
-        # In full implementation, would compute stationary distribution
         if len(self.states) == 0:
             return 0.0
-        return np.log2(len(self.states))
+            
+        stationary_dist = self.compute_stationary_distribution()
+        
+        # Compute entropy H(π) = -Σ π(s) log₂ π(s)
+        entropy = 0.0
+        for prob in stationary_dist.values():
+            if prob > 0:
+                entropy -= prob * np.log2(prob)
+                
+        return entropy
         
     def to_dict(self) -> Dict:
         """

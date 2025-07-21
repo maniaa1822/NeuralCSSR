@@ -16,6 +16,7 @@ from dataclasses import asdict
 
 from ..core.epsilon_machine import EpsilonMachine
 from ..enumeration.enumerate_machines import enumerate_machines_library
+from ..machines.domain_specific import create_domain_specific_machine
 from ..config.generation_schemas import DatasetConfig, MachineSpec, SequenceSpec, QualitySpec, load_config_from_dict
 from .sequence_processor import SequenceProcessor
 from .neural_formatter import NeuralDatasetFormatter
@@ -141,72 +142,115 @@ class UnifiedDatasetGenerator:
         return generation_report
         
     def _load_machine_library(self) -> List[Dict[str, Any]]:
-        """Load enumerated epsilon-machines based on config specifications."""
+        """Load machines based on config specifications (enumerated or domain-specific)."""
         all_machines = []
         
         # Determine alphabet from first machine spec (simplified)
         alphabet = ['0', '1']  # Default binary alphabet
         
         for machine_spec in self.config.machine_specs:
-            # Parse complexity class (e.g., "2-state-binary" -> 2 states)
-            num_states = int(machine_spec.complexity_class.split('-')[0])
-            
-            # Generate all possible machines with this number of states
-            all_possible_machines = enumerate_machines_library(
-                max_states=num_states,
-                alphabet=alphabet,
-                max_machines_per_size=None  # Get all possible machines
-            )
-            
-            # Filter to machines with exactly the requested number of states
-            machines_with_n_states = [
-                m for m in all_possible_machines 
-                if m['properties']['num_states'] == num_states
-            ]
-            
-            # Select the requested number of distinct machines
-            if len(machines_with_n_states) >= machine_spec.machine_count:
-                selected_machines = machines_with_n_states[:machine_spec.machine_count]
+            # Check if this is a domain-specific machine
+            if hasattr(machine_spec, 'machine_type') and machine_spec.machine_type == 'domain_specific':
+                # Handle domain-specific machines
+                selected_machines = self._load_domain_specific_machines(machine_spec, alphabet)
             else:
-                # If not enough distinct machines, repeat the available ones
-                selected_machines = []
-                for i in range(machine_spec.machine_count):
-                    machine_idx = i % len(machines_with_n_states)
-                    selected_machines.append(machines_with_n_states[machine_idx])
-                
-            # Configure machine probabilities and add metadata
-            for i, machine in enumerate(selected_machines):
-                machine_obj = machine['machine']
-                
-                # Configure transition probabilities
-                if not machine_spec.topological:
-                    if machine_spec.custom_probabilities:
-                        # Use custom probabilities
-                        machine_obj.set_transition_probabilities(machine_spec.custom_probabilities)
-                    else:
-                        # Use random probabilities with specified bias
-                        machine_obj.randomize_probabilities(
-                            seed=machine_spec.probability_seed + i if machine_spec.probability_seed else None,
-                            bias_strength=machine_spec.bias_strength
-                        )
-                
-                # Recompute properties after bias application
-                from ..enumeration.enumerate_machines import MachineEnumerator
-                enumerator = MachineEnumerator(max_states=num_states, alphabet=alphabet)
-                updated_properties = enumerator.compute_machine_properties(machine_obj)
-                
-                # Add metadata - each machine will generate samples_per_machine sequences
-                machine['sampling_weight'] = machine_spec.weight
-                machine['complexity_class'] = machine_spec.complexity_class
-                machine['samples_per_machine'] = machine_spec.samples_per_machine
-                machine['is_topological'] = machine_obj.is_topological()  # Check actual machine state
-                machine['bias_strength'] = machine_spec.bias_strength
-                machine['machine_spec_id'] = len(all_machines)  # Unique ID for this spec instance
-                machine['properties'] = updated_properties  # Update with post-bias properties
-                
+                # Handle enumerated machines (legacy behavior)
+                selected_machines = self._load_enumerated_machines(machine_spec, alphabet)
+            
             all_machines.extend(selected_machines)
             
         return all_machines
+    
+    def _load_domain_specific_machines(self, machine_spec: MachineSpec, alphabet: List[str]) -> List[Dict[str, Any]]:
+        """Load domain-specific machines like even_process, alternating, etc."""
+        selected_machines = []
+        
+        # Create the requested number of machines
+        for i in range(machine_spec.machine_count):
+            seed = machine_spec.probability_seed + i if machine_spec.probability_seed else None
+            
+            # Parse machine type from complexity_class (e.g., "even_process-binary" -> "even_process")
+            machine_type = machine_spec.complexity_class.split('-')[0]
+            
+            # Create the domain-specific machine
+            machine_data = create_domain_specific_machine(
+                machine_type=machine_type,
+                alphabet=alphabet,
+                seed=seed
+            )
+            
+            # Add metadata
+            machine_data['sampling_weight'] = machine_spec.weight
+            machine_data['complexity_class'] = machine_spec.complexity_class
+            machine_data['samples_per_machine'] = machine_spec.samples_per_machine
+            machine_data['is_topological'] = machine_data['machine'].is_topological()
+            machine_data['bias_strength'] = machine_spec.bias_strength
+            machine_data['machine_spec_id'] = f"{machine_spec.complexity_class}_{i}"
+            machine_data['id'] = f"{machine_spec.complexity_class}_{i}"
+            
+            selected_machines.append(machine_data)
+        
+        return selected_machines
+    
+    def _load_enumerated_machines(self, machine_spec: MachineSpec, alphabet: List[str]) -> List[Dict[str, Any]]:
+        """Load enumerated machines (legacy behavior)."""
+        # Parse complexity class (e.g., "2-state-binary" -> 2 states)
+        num_states = int(machine_spec.complexity_class.split('-')[0])
+        
+        # Generate all possible machines with this number of states
+        all_possible_machines = enumerate_machines_library(
+            max_states=num_states,
+            alphabet=alphabet,
+            max_machines_per_size=None  # Get all possible machines
+        )
+        
+        # Filter to machines with exactly the requested number of states
+        machines_with_n_states = [
+            m for m in all_possible_machines 
+            if m['properties']['num_states'] == num_states
+        ]
+        
+        # Select the requested number of distinct machines
+        if len(machines_with_n_states) >= machine_spec.machine_count:
+            selected_machines = machines_with_n_states[:machine_spec.machine_count]
+        else:
+            # If not enough distinct machines, repeat the available ones
+            selected_machines = []
+            for i in range(machine_spec.machine_count):
+                machine_idx = i % len(machines_with_n_states)
+                selected_machines.append(machines_with_n_states[machine_idx])
+            
+        # Configure machine probabilities and add metadata
+        for i, machine in enumerate(selected_machines):
+            machine_obj = machine['machine']
+            
+            # Configure transition probabilities
+            if not machine_spec.topological:
+                if machine_spec.custom_probabilities:
+                    # Use custom probabilities
+                    machine_obj.set_transition_probabilities(machine_spec.custom_probabilities)
+                else:
+                    # Use random probabilities with specified bias
+                    machine_obj.randomize_probabilities(
+                        seed=machine_spec.probability_seed + i if machine_spec.probability_seed else None,
+                        bias_strength=machine_spec.bias_strength
+                    )
+            
+            # Recompute properties after bias application
+            from ..enumeration.enumerate_machines import MachineEnumerator
+            enumerator = MachineEnumerator(max_states=num_states, alphabet=alphabet)
+            updated_properties = enumerator.compute_machine_properties(machine_obj)
+            
+            # Add metadata - each machine will generate samples_per_machine sequences
+            machine['sampling_weight'] = machine_spec.weight
+            machine['complexity_class'] = machine_spec.complexity_class
+            machine['samples_per_machine'] = machine_spec.samples_per_machine
+            machine['is_topological'] = machine_obj.is_topological()  # Check actual machine state
+            machine['bias_strength'] = machine_spec.bias_strength
+            machine['machine_spec_id'] = len(selected_machines)  # Unique ID for this spec instance
+            machine['properties'] = updated_properties  # Update with post-bias properties
+            
+        return selected_machines
         
     def _plan_generation(self, machine_library: List[Dict]) -> Dict[str, Any]:
         """Create sampling strategy across machines."""
@@ -251,7 +295,9 @@ class UnifiedDatasetGenerator:
                 machine=machine['machine'],
                 num_sequences=num_sequences,
                 length_distribution=tuple(generation_plan['length_distribution']),
-                track_states=True
+                track_states=True,
+                use_steady_state=self.config.sequence_spec.use_steady_state,
+                burn_in_length=self.config.sequence_spec.burn_in_length
             )
             
             # Add machine metadata to each sequence

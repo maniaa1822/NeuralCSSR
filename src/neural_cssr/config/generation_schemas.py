@@ -12,7 +12,7 @@ from typing import List, Tuple, Dict, Any, Optional
 @dataclass
 class MachineSpec:
     """Specification for machine family selection."""
-    complexity_class: str  # "2-state-binary", "3-state-binary", etc.
+    complexity_class: str  # "2-state-binary", "3-state-binary", "even_process", "alternating", etc.
     machine_count: int     # Number of machines from this class
     samples_per_machine: int  # Sequences per machine
     weight: float = 1.0    # Sampling weight for this machine class
@@ -22,6 +22,9 @@ class MachineSpec:
     bias_strength: float = 0.0  # For random probs: 0.0=uniform, 1.0=max bias
     custom_probabilities: Optional[Dict[str, Dict[str, float]]] = None  # Custom transition probs
     probability_seed: Optional[int] = None  # Seed for random probability generation
+    
+    # Domain-specific machine settings
+    machine_type: str = "enumerated"  # "enumerated" or "domain_specific"
 
 
 @dataclass
@@ -33,11 +36,20 @@ class SequenceSpec:
     val_ratio: float = 0.15
     test_ratio: float = 0.15
     
+    # TransCSSR-style generation parameters
+    use_steady_state: bool = False  # Start sequences from steady-state distribution
+    burn_in_length: int = 0  # Number of symbols to discard at beginning (≥ 2 × L_max)
+    contiguous_mode: bool = False  # Generate fewer, longer sequences
+    
     def __post_init__(self):
         """Validate that ratios sum to 1.0."""
         total_ratio = self.train_ratio + self.val_ratio + self.test_ratio
         if abs(total_ratio - 1.0) > 1e-6:
             raise ValueError(f"Split ratios must sum to 1.0, got {total_ratio}")
+            
+        # Validate burn-in length
+        if self.burn_in_length < 0:
+            raise ValueError("Burn-in length cannot be negative")
 
 
 @dataclass
@@ -170,6 +182,15 @@ class ConfigurationValidator:
             errors.append("Validation ratio must be between 0 and 1")
         if not (0 < sequence_spec.test_ratio < 1):
             errors.append("Test ratio must be between 0 and 1")
+            
+        # Validate burn-in length
+        if sequence_spec.burn_in_length < 0:
+            errors.append("Burn-in length cannot be negative")
+            
+        # Warn about contiguous mode requirements
+        if sequence_spec.contiguous_mode:
+            if max_len < 50000:
+                errors.append("Contiguous mode should use sequences ≥ 50,000 symbols for transCSSR compatibility")
             
         return errors
         
@@ -367,6 +388,63 @@ def create_example_configs() -> Dict[str, DatasetConfig]:
             min_transition_coverage=50,
             entropy_tolerance=0.03,
             length_diversity_threshold=0.4
+        ),
+        neural_format_config={
+            'context_length': 512,
+            'vocab_special_tokens': ['<PAD>', '<UNK>'],
+            'include_position_metadata': True
+        },
+        random_seed=42
+    )
+    
+    # TransCSSR-compatible configuration
+    examples['transcssr_compatible'] = DatasetConfig(
+        experiment_name="transcssr_compatible_biased",
+        machine_specs=[
+            MachineSpec(
+                complexity_class="2-state-binary",
+                machine_count=2,
+                samples_per_machine=1,  # Few sequences, each very long
+                weight=1.0,
+                topological=False,
+                bias_strength=0.7,
+                probability_seed=42
+            ),
+            MachineSpec(
+                complexity_class="3-state-binary",
+                machine_count=3,
+                samples_per_machine=1,  # Few sequences, each very long
+                weight=1.0,
+                topological=False,
+                custom_probabilities={
+                    "S0": {"0": 0.8, "1": 0.2},
+                    "S1": {"0": 0.3, "1": 0.7},
+                    "S2": {"0": 0.5, "1": 0.5}
+                }
+            ),
+            MachineSpec(
+                complexity_class="2-state-binary",
+                machine_count=1,
+                samples_per_machine=1,  # Few sequences, each very long
+                weight=1.0,
+                topological=True  # One uniform machine for comparison
+            )
+        ],
+        sequence_spec=SequenceSpec(
+            length_distribution=(50000, 75000),  # Long sequences ≥ 5 × 10⁴ symbols
+            total_sequences=6,  # Total matches sum of samples_per_machine
+            train_ratio=0.7,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            use_steady_state=True,  # Start from steady-state distribution
+            burn_in_length=20,  # Discard first 20 symbols (≥ 2 × L_max = 2 × 10)
+            contiguous_mode=True  # Generate fewer, longer sequences
+        ),
+        quality_spec=QualitySpec(
+            min_state_coverage=100,
+            min_transition_coverage=50,
+            entropy_tolerance=0.05,
+            length_diversity_threshold=0.2  # Less diversity needed for long sequences
         ),
         neural_format_config={
             'context_length': 512,
