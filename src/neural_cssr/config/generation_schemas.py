@@ -134,6 +134,15 @@ class ConfigurationValidator:
             # Validate complexity class format
             if not spec.complexity_class:
                 errors.append(f"Machine spec {i}: complexity_class cannot be empty")
+            elif hasattr(spec, 'machine_type') and spec.machine_type == 'domain_specific':
+                # Domain-specific machines use different naming convention
+                domain_machines = ['even_process', 'alternating', 'golden_mean', 'period4', 'context_sensitive', 'incompressible_counter', 'truly_incompressible', 'seven_state_human_sequence']
+                machine_type = spec.complexity_class.split('-')[0]
+                if machine_type not in domain_machines:
+                    errors.append(f"Machine spec {i}: unknown domain-specific machine '{machine_type}'. "
+                                f"Available: {domain_machines}")
+                elif not (spec.complexity_class.endswith('-binary') or spec.complexity_class.endswith('-ternary')):
+                    errors.append(f"Machine spec {i}: domain-specific machines must still specify alphabet (-binary or -ternary)")
             elif not spec.complexity_class.endswith('-binary') and not spec.complexity_class.endswith('-ternary'):
                 errors.append(f"Machine spec {i}: complexity_class must end with '-binary' or '-ternary'")
                 

@@ -230,6 +230,19 @@ class MachineDistanceCalculator:
                     info['has_transitions'] = 'transitions' in structure
                     break
         
+        elif 'analysis_results' in discovered_machine:
+            info['format'] = 'analysis_results'
+            analysis_results = discovered_machine['analysis_results']
+            info['parameter_sets'] = len(analysis_results.get('parameter_results', {}))
+            
+            # Get info from first parameter set
+            for param_data in analysis_results['parameter_results'].values():
+                if 'discovered_structure' in param_data:
+                    structure = param_data['discovered_structure']
+                    info['num_states'] = structure.get('num_states', len(structure.get('states', {})))
+                    info['has_transitions'] = 'transitions' in structure
+                    break
+        
         elif 'states' in discovered_machine:
             info['format'] = 'direct_states'
             info['num_states'] = len(discovered_machine['states'])

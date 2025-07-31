@@ -66,7 +66,100 @@ class SymbolDistributionDistance:
                                     'observations': state_info.get('total_observations', 0),
                                     'entropy': state_info.get('entropy', 0.0)
                                 })
+                        elif 'emission_probabilities' in state_info:
+                            # Handle transCSSR format with emission_probabilities
+                            emission_probs = state_info['emission_probabilities']
+                            # Convert list to dictionary (assumes binary alphabet ['0', '1'])
+                            if isinstance(emission_probs, list) and len(emission_probs) == 2:
+                                symbol_probs = {'0': emission_probs[0], '1': emission_probs[1]}
+                            else:
+                                symbol_probs = emission_probs
+                            
+                            states.append({
+                                'state_name': state_name,
+                                'distribution': symbol_probs,
+                                'observations': state_info.get('total_count', 0),
+                                'entropy': state_info.get('entropy', 0.0)
+                            })
                     break  # Use first parameter set found
+        elif 'analysis_results' in discovered_machine:
+            # Navigate to actual states data in analysis_results format
+            analysis_results = discovered_machine['analysis_results']
+            
+            # Check for parameter sweep results first
+            if 'parameter_results' in analysis_results:
+                for param_key, param_data in analysis_results['parameter_results'].items():
+                    if 'discovered_structure' in param_data and 'states' in param_data['discovered_structure']:
+                        state_data = param_data['discovered_structure']['states']
+                        for state_name, state_info in state_data.items():
+                            if 'symbol_distribution' in state_info:
+                                # Convert counts to probabilities
+                                symbol_counts = state_info['symbol_distribution']
+                                total_count = sum(symbol_counts.values())
+                                if total_count > 0:
+                                    symbol_probs = {
+                                        symbol: count / total_count 
+                                        for symbol, count in symbol_counts.items()
+                                    }
+                                    states.append({
+                                        'state_name': state_name,
+                                        'distribution': symbol_probs,
+                                        'observations': state_info.get('total_observations', 0),
+                                        'entropy': state_info.get('entropy', 0.0)
+                                    })
+                            elif 'emission_probabilities' in state_info:
+                                # Handle transCSSR format with emission_probabilities
+                                emission_probs = state_info['emission_probabilities']
+                                # Convert list to dictionary (assumes binary alphabet ['0', '1'])
+                                if isinstance(emission_probs, list) and len(emission_probs) == 2:
+                                    symbol_probs = {'0': emission_probs[0], '1': emission_probs[1]}
+                                else:
+                                    symbol_probs = emission_probs
+                                
+                                states.append({
+                                    'state_name': state_name,
+                                    'distribution': symbol_probs,
+                                    'observations': state_info.get('total_count', 0),
+                                    'entropy': state_info.get('entropy', 0.0)
+                                })
+                        break  # Use first parameter set found
+            
+            # Check for single result format  
+            elif 'single_result' in analysis_results:
+                single_result = analysis_results['single_result']
+                if 'discovered_structure' in single_result and 'states' in single_result['discovered_structure']:
+                    state_data = single_result['discovered_structure']['states']
+                    for state_name, state_info in state_data.items():
+                        if 'symbol_distribution' in state_info:
+                            # Convert counts to probabilities
+                            symbol_counts = state_info['symbol_distribution']
+                            total_count = sum(symbol_counts.values())
+                            if total_count > 0:
+                                symbol_probs = {
+                                    symbol: count / total_count 
+                                    for symbol, count in symbol_counts.items()
+                                }
+                                states.append({
+                                    'state_name': state_name,
+                                    'distribution': symbol_probs,
+                                    'observations': state_info.get('total_observations', 0),
+                                    'entropy': state_info.get('entropy', 0.0)
+                                })
+                        elif 'emission_probabilities' in state_info:
+                            # Handle transCSSR format with emission_probabilities
+                            emission_probs = state_info['emission_probabilities']
+                            # Convert list to dictionary (assumes binary alphabet ['0', '1'])
+                            if isinstance(emission_probs, list) and len(emission_probs) == 2:
+                                symbol_probs = {'0': emission_probs[0], '1': emission_probs[1]}
+                            else:
+                                symbol_probs = emission_probs
+                            
+                            states.append({
+                                'state_name': state_name,
+                                'distribution': symbol_probs,
+                                'observations': state_info.get('total_count', 0),
+                                'entropy': state_info.get('entropy', 0.0)
+                            })
         elif 'states' in discovered_machine:
             # Direct states format
             for state_name, state_info in discovered_machine['states'].items():

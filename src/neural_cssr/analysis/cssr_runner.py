@@ -10,7 +10,7 @@ import time
 import numpy as np
 from collections import defaultdict, Counter
 
-from ..classical.cssr import ClassicalCSSR
+from ..classical.transcssr_wrapper import TransCSSRWrapper
 
 
 class CSSRExecutionEngine:
@@ -41,61 +41,19 @@ class CSSRExecutionEngine:
         Returns:
             Single analysis results
         """
-        print(f"Running single CSSR analysis (L={max_length}, α={significance_level})")
+        print(f"Running single transCSSR analysis (L={max_length}, α={significance_level})")
         
-        start_time = time.time()
+        # Convert sequences to transCSSR format (single string)
+        combined_sequence = ''.join(self.sequences)
+        string_x = '0' * len(combined_sequence)  # Single input symbol
+        string_y = combined_sequence
         
-        # Run CSSR
-        cssr = ClassicalCSSR(significance_level=significance_level)
+        # Run transCSSR
+        transcssr = TransCSSRWrapper(significance_level=significance_level)
+        # Result is already in the correct format from transCSSR wrapper
+        analysis_result = transcssr.run_cssr(string_x, string_y, max_length)
         
-        # Convert sequences to CSSR format
-        data_list = []
-        for seq in self.sequences:
-            for i in range(len(seq) - 1):
-                history = list(seq[:i+1])  # Everything up to position i
-                target = seq[i+1]          # Next symbol
-                data_list.append({
-                    'raw_history': history,
-                    'raw_target': target
-                })
-        
-        cssr.load_from_raw_data(data_list, metadata={})
-        converged = cssr.run_cssr(
-            max_iterations=20,
-            max_history_length=max_length
-        )
-        
-        runtime = time.time() - start_time
-        
-        # Extract detailed results
-        result = {
-            'parameters': {
-                'max_length': max_length,
-                'significance_level': significance_level
-            },
-            'execution_info': {
-                'converged': converged,
-                'runtime_seconds': runtime,
-                'sequence_count': len(self.sequences),
-                'total_observations': sum(len(seq) for seq in self.sequences)
-            },
-            'discovered_structure': {
-                'num_states': len(cssr.causal_states),
-                'states': self._extract_detailed_state_info(cssr.causal_states),
-                'transitions': self._extract_transition_info(cssr.causal_states),
-                'alphabet': list(cssr.alphabet) if hasattr(cssr, 'alphabet') else self._get_alphabet()
-            },
-            'computational_stats': {
-                'total_histories': len(cssr.history_counts),
-                'max_history_length_used': max([len(h) for h in cssr.history_counts.keys()]) if cssr.history_counts else 0,
-                'total_statistical_tests': getattr(cssr, 'total_tests_performed', 0)
-            }
-        }
-        
-        # Compute prediction performance
-        result['prediction_performance'] = self._compute_prediction_performance(cssr)
-        
-        return result
+        return analysis_result
         
     def run_parameter_sweep(self, 
                           max_lengths: Optional[List[int]] = None,
@@ -117,46 +75,32 @@ class CSSRExecutionEngine:
             }
         """
         if max_lengths is None:
-            max_lengths = [6, 8, 10, 12]
+            max_lengths = [6, 8, 9, 10, 12]  # Added L=9 based on reference CSSR results
         if significance_levels is None:
-            significance_levels = [0.001, 0.01, 0.05, 0.1]
+            significance_levels = [0.001, 0.01, 0.05, 0.1]  # Keep 0.001 as critical parameter
         
-        print(f"Running CSSR parameter sweep: {len(max_lengths)} × {len(significance_levels)} = {len(max_lengths) * len(significance_levels)} combinations")
+        print(f"Running transCSSR parameter sweep: {len(max_lengths)} × {len(significance_levels)} = {len(max_lengths) * len(significance_levels)} combinations")
         
-        results = {}
+        # Convert sequences to transCSSR format
+        combined_sequence = ''.join(self.sequences)
+        string_x = '0' * len(combined_sequence)
+        string_y = combined_sequence
         
-        for max_length in max_lengths:
-            for significance_level in significance_levels:
-                param_key = f"L{max_length}_alpha{significance_level}"
-                
-                print(f"  Running {param_key}...")
-                
-                try:
-                    result = self.run_single_analysis(max_length, significance_level)
-                    results[param_key] = result
-                    
-                    # Print quick summary
-                    print(f"    States: {result['discovered_structure']['num_states']}, "
-                          f"Converged: {result['execution_info']['converged']}, "
-                          f"Time: {result['execution_info']['runtime_seconds']:.2f}s")
-                    
-                except Exception as e:
-                    print(f"    Error: {e}")
-                    results[param_key] = {
-                        'parameters': {'max_length': max_length, 'significance_level': significance_level},
-                        'error': str(e)
-                    }
+        # Use transCSSR wrapper's built-in parameter sweep
+        transcssr = TransCSSRWrapper()
+        sweep_results = transcssr.run_parameter_sweep(
+            string_x, string_y, max_lengths, significance_levels
+        )
         
-        # Analyze results
-        analysis_results = {
-            'parameter_results': results,
-            'best_parameters': self._select_best_parameters(results),
-            'convergence_analysis': self._analyze_convergence(results),
-            'parameter_sensitivity': self._analyze_parameter_sensitivity(results),
-            'summary_statistics': self._compute_summary_statistics(results)
-        }
+        # Print summary of results
+        for param_key, result in sweep_results['parameter_results'].items():
+            if 'error' not in result:
+                print(f"  {param_key}: States: {result['discovered_structure']['num_states']}, "
+                      f"Time: {result['execution_info']['runtime_seconds']:.2f}s")
+            else:
+                print(f"  {param_key}: Error: {result['error']}")
         
-        return analysis_results
+        return sweep_results
     
     def _compute_sequence_stats(self) -> Dict[str, Any]:
         """Compute basic statistics about input sequences."""

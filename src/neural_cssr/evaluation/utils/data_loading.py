@@ -179,7 +179,13 @@ def _build_machine_states(machine_id: str, properties: Dict[str, Any],
             
             # Simple deterministic bias generation
             import random
-            random.seed(prob_seed + int(machine_id) * 100)
+            # Extract numeric part from machine_id, or use hash if not numeric
+            try:
+                numeric_id = int(machine_id)
+            except ValueError:
+                # If machine_id is not numeric, use hash for deterministic randomization
+                numeric_id = hash(machine_id) % 1000
+            random.seed(prob_seed + numeric_id * 100)
             
             for i in range(num_states):
                 state_id = f'S{i}'
@@ -214,8 +220,8 @@ def validate_data_format(cssr_results: Dict[str, Any],
     if not isinstance(cssr_results, dict):
         raise ValueError("CSSR results must be a dictionary")
     
-    if 'cssr_results' not in cssr_results and 'states' not in cssr_results:
-        raise ValueError("CSSR results must contain either 'cssr_results' or 'states' key")
+    if 'cssr_results' not in cssr_results and 'states' not in cssr_results and 'analysis_results' not in cssr_results:
+        raise ValueError("CSSR results must contain either 'cssr_results', 'states', or 'analysis_results' key")
     
     # Validate ground truth machines
     if not isinstance(ground_truth_machines, list):

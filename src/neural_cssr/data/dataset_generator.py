@@ -55,7 +55,7 @@ class UnifiedDatasetGenerator:
             np.random.seed(self.seed)
         
         # Initialize components
-        self.sequence_processor = SequenceProcessor()
+        self.sequence_processor = SequenceProcessor(seed=self.seed)
         self.neural_formatter = NeuralDatasetFormatter()
         self.metadata_computer = StatisticalMetadataComputer()
         self.quality_validator = DatasetQualityValidator()
@@ -167,7 +167,7 @@ class UnifiedDatasetGenerator:
         
         # Create the requested number of machines
         for i in range(machine_spec.machine_count):
-            seed = machine_spec.probability_seed + i if machine_spec.probability_seed else None
+            seed = machine_spec.probability_seed + i if machine_spec.probability_seed else (self.seed + i if self.seed else None)
             
             # Parse machine type from complexity_class (e.g., "even_process-binary" -> "even_process")
             machine_type = machine_spec.complexity_class.split('-')[0]
@@ -494,10 +494,16 @@ class UnifiedDatasetGenerator:
             if machine_id not in unique_machines:
                 unique_machines[machine_id] = metadata.get('machine_properties', {})
         
+        # Combine split metadata to match the actual train/val/test files
+        split_metadata = []
+        split_metadata.extend(split_data['splits']['train']['metadata'])
+        split_metadata.extend(split_data['splits']['val']['metadata'])
+        split_metadata.extend(split_data['splits']['test']['metadata'])
+        
         ground_truth = {
-            'causal_state_labels': {i: m.get('state_trajectory', []) for i, m in enumerate(sequences_data['metadata'])},
+            'causal_state_labels': {i: m.get('state_trajectory', []) for i, m in enumerate(split_metadata)},
             'machine_properties': unique_machines,  # One entry per unique machine
-            'sequence_metadata': sequences_data['metadata']
+            'sequence_metadata': split_metadata
         }
         
         for key, data in ground_truth.items():

@@ -162,7 +162,14 @@ class SequenceProcessor:
                 
             # Sample transition based on probabilities
             transition_probs = [t['probability'] for t in available_transitions]
-            chosen_idx = np.random.choice(len(available_transitions), p=transition_probs)
+            
+            # Normalize probabilities to be safe (matches epsilon_machine.py behavior)
+            total_prob = sum(transition_probs)
+            if total_prob == 0:
+                break  # Avoid division by zero
+            
+            normalized_probs = [p / total_prob for p in transition_probs]
+            chosen_idx = np.random.choice(len(available_transitions), p=normalized_probs)
             chosen_transition = available_transitions[chosen_idx]
             
             # Record transition details

@@ -5,7 +5,9 @@
       "Bash(touch:*)",
       "Bash(rm:*)",
       "Bash(ls:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
