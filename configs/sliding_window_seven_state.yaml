@@ -1,0 +1,35 @@
+model:
+  type: sliding_window
+  vocab_size: 3
+  d_model: 32
+  n_layers: 2
+  n_heads: 2
+  window_size: 25
+  dropout: 0.1
+
+training:
+  epochs: 5
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.01
+  gradient_clipping: 1.0
+  
+data:
+  train_path: "domain_machines/seven_state_human/seven_state_human/seven_state_human.dat"
+  chunk_size: 25
+  sliding_window: true  # Enable overlapping windows for more training data
+  test_split: 0.1
+  
+experiment:
+  name: "sliding_window_seven_state"
+  output_dir: "checkpoints/sliding_window_seven_state"
+  
+logging:
+  log_interval: 100
+  eval_interval: 500
+  save_best: true
+  
+generation:
+  eval_length: 1000
+  temperature: 0.8
+  seed: "0111000110"

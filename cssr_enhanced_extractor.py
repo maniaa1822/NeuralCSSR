@@ -25,10 +25,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
     """CSSR-enhanced FSM extraction using suffix trees + neural representations."""
     
     def __init__(self, model, device, num_states=7, max_suffix_length=10, 
-                 significance_level=0.001):
+                 significance_level=0.001, min_suffix_count=10):
         super().__init__(model, device, num_states)
         self.max_suffix_length = max_suffix_length
         self.significance_level = significance_level
+        self.neural_threshold = 5.0  # Default neural threshold
+        self.min_suffix_count = min_suffix_count  # For filtering sparse suffixes
         
         # CSSR-specific storage
         self.suffix_tree = {}
@@ -77,15 +79,49 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
                     if i < hidden_seq.shape[0]:
                         self.suffix_hidden_states[suffix].append(hidden_seq[i].cpu().numpy())
         
-        # Filter suffixes by minimum count
-        min_count = 10
+        # Filter suffixes by minimum count (dynamic based on max_suffix_length)
+        min_count = getattr(self, 'min_suffix_count', 10)
+        pre_filter_count = len(self.suffix_tree)
+        
+        # Analyze suffix distribution before filtering
+        length_distribution = {}
+        for suffix in self.suffix_tree.keys():
+            length = len(suffix)
+            if length not in length_distribution:
+                length_distribution[length] = {'count': 0, 'total_obs': 0, 'suffixes': []}
+            length_distribution[length]['count'] += 1
+            length_distribution[length]['total_obs'] += self.suffix_tree[suffix]['count']
+            length_distribution[length]['suffixes'].append(suffix)
+        
+        print(f"📊 Pre-filter suffix analysis:")
+        for length in sorted(length_distribution.keys()):
+            stats = length_distribution[length]
+            avg_obs = stats['total_obs'] / stats['count'] if stats['count'] > 0 else 0
+            print(f"   Length {length}: {stats['count']} suffixes, avg {avg_obs:.1f} observations each")
+        
         filtered_suffixes = {
             suffix: data for suffix, data in self.suffix_tree.items() 
             if data['count'] >= min_count
         }
+        
+        # Analyze what was filtered out
+        filtered_out = pre_filter_count - len(filtered_suffixes)
+        if filtered_out > 0:
+            print(f"⚠️  Filtered out {filtered_out} suffixes with < {min_count} observations")
+            
+            # Count by length what was filtered
+            filtered_by_length = {}
+            for suffix, data in self.suffix_tree.items():
+                if data['count'] < min_count:
+                    length = len(suffix)
+                    filtered_by_length[length] = filtered_by_length.get(length, 0) + 1
+            
+            if filtered_by_length:
+                print(f"   Filtered by length: {dict(sorted(filtered_by_length.items()))}")
+        
         self.suffix_tree = filtered_suffixes
         
-        print(f"✅ Built suffix tree with {len(self.suffix_tree)} suffixes")
+        print(f"✅ Built suffix tree with {len(self.suffix_tree)} suffixes (was {pre_filter_count})")
         print(f"   Suffix lengths: {sorted(set(len(s) for s in self.suffix_tree.keys()))}")
     
     def test_suffix_equivalence(self, suffix1: str, suffix2: str) -> Dict:
@@ -110,12 +146,24 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
             
             observed = np.array(observed)
             
+            # Check if we have sufficient data for reliable chi-square test
+            total_obs = np.sum(observed)
+            min_expected = 5  # Standard chi-square requirement
+            
             # Perform chi-square test
             try:
-                chi2_stat, chi2_pvalue, _, _ = chi2_contingency(observed)
-                classical_equivalent = chi2_pvalue > self.significance_level
-            except ValueError:
-                # Not enough data
+                chi2_stat, chi2_pvalue, _, expected = chi2_contingency(observed)
+                
+                # Check if chi-square assumptions are violated (expected frequencies too low)
+                if np.any(expected < min_expected) and total_obs < 20:
+                    # Classical CSSR struggles here - insufficient data for reliable test
+                    classical_equivalent = True  # Default to equivalent when data is sparse
+                    chi2_pvalue = 1.0  # Indicate unreliable test
+                else:
+                    classical_equivalent = chi2_pvalue > self.significance_level
+                    
+            except (ValueError, RuntimeWarning):
+                # Not enough data or other statistical issues
                 classical_equivalent = True
                 chi2_pvalue = 1.0
         
@@ -133,7 +181,7 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
             neural_distance = np.linalg.norm(mean1 - mean2)
             
             # Threshold for neural equivalence (tunable parameter)
-            neural_threshold = 5.0  # More lenient threshold to get ~7 states
+            neural_threshold = getattr(self, 'neural_threshold', 5.0)
             neural_equivalent = neural_distance < neural_threshold
         
         return {
@@ -154,6 +202,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         equivalence_groups = []
         processed = set()
         
+        # Logging counters
+        neural_discriminant_count = 0
+        classical_discriminant_count = 0
+        both_agree_merge = 0
+        both_agree_separate = 0
+        
         for i, suffix1 in enumerate(suffixes):
             if suffix1 in processed:
                 continue
@@ -171,13 +225,35 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
                 # Test equivalence
                 test_result = self.test_suffix_equivalence(suffix1, suffix2)
                 
+                # Log when neural vs classical disagree
+                if test_result['classical_equivalent'] != test_result['neural_equivalent']:
+                    if test_result['neural_equivalent'] and not test_result['classical_equivalent']:
+                        # Neural says merge, classical says separate - neural is discriminant
+                        neural_discriminant_count += 1
+                        print(f"   🧠 NEURAL DISCRIMINANT: '{suffix1[:8]}...' ↔ '{suffix2[:8]}...' → MERGE")
+                        print(f"      Classical: χ²={test_result['chi2_pvalue']:.4f} (separate), Neural: d={test_result['neural_distance']:.2f} (merge)")
+                    elif test_result['classical_equivalent'] and not test_result['neural_equivalent']:
+                        # Classical says merge, neural says separate - classical is discriminant  
+                        classical_discriminant_count += 1
+                        print(f"   📊 CLASSICAL DISCRIMINANT: '{suffix1[:8]}...' ↔ '{suffix2[:8]}...' → SEPARATE")
+                        print(f"      Classical: χ²={test_result['chi2_pvalue']:.4f} (merge), Neural: d={test_result['neural_distance']:.2f} (separate)")
+                elif test_result['classical_equivalent'] and test_result['neural_equivalent']:
+                    both_agree_merge += 1
+                else:
+                    both_agree_separate += 1
+                
                 if test_result['combined_equivalent']:
                     equiv_group.add(suffix2)
                     processed.add(suffix2)
             
             equivalence_groups.append(equiv_group)
         
-        print(f"✅ Found {len(equivalence_groups)} equivalence groups")
+        print(f"\n📊 EQUIVALENCE TEST RESULTS:")
+        print(f"   🧠 Neural discriminant (overruled classical): {neural_discriminant_count}")
+        print(f"   📊 Classical discriminant (overruled neural): {classical_discriminant_count}")
+        print(f"   🤝 Both agreed to merge: {both_agree_merge}")
+        print(f"   🚫 Both agreed to separate: {both_agree_separate}")
+        print(f"\n✅ Found {len(equivalence_groups)} equivalence groups")
         for i, group in enumerate(equivalence_groups):
             print(f"   Group {i}: {len(group)} suffixes, examples: {list(group)[:3]}")
         
@@ -234,22 +310,44 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         
         print(f"✅ Built {len(self.causal_states)} causal states")
         
-        # If we have too many states, merge similar ones
-        if len(self.causal_states) > self.num_states * 2:
-            print(f"🔄 Too many states ({len(self.causal_states)}), merging similar ones...")
-            self.causal_states = self.merge_similar_causal_states(self.causal_states, target_states=self.num_states)
-            print(f"✅ Merged to {len(self.causal_states)} causal states")
+        # Skip K-means fallback - show raw CSSR+neural results
+        if hasattr(self, 'num_states') and self.num_states and len(self.causal_states) > self.num_states * 2:
+            print(f"ℹ️  CSSR+neural produced {len(self.causal_states)} states (target: {self.num_states})")
+            print(f"   Ratio: {len(self.causal_states) / self.num_states:.1f}x target → K-means fallback DISABLED")
+            print(f"   Keeping all {len(self.causal_states)} naturally discovered states")
+        elif not hasattr(self, 'num_states') or not self.num_states:
+            # Natural discovery mode - no forced merging
+            print(f"✅ Natural discovery mode: keeping all {len(self.causal_states)} discovered states")
+        else:
+            print(f"✅ CSSR+neural produced {len(self.causal_states)} states (within acceptable range for target: {getattr(self, 'num_states', 'unspecified')})")
     
     def merge_similar_causal_states(self, causal_states: List[Dict], target_states: int) -> List[Dict]:
         """Merge similar causal states using hidden state similarity."""
         if len(causal_states) <= target_states:
             return causal_states
         
+        print(f"\n🔧 K-MEANS FALLBACK ACTIVATED")
+        print(f"   Initial states: {len(causal_states)} → Target: {target_states}")
+        print(f"   Reason: CSSR+neural produced too many states, applying K-means clustering")
+        
         # Use K-means clustering on representative hidden states
         hidden_reps = np.array([state['representative_hidden'] for state in causal_states])
         
+        print(f"   📊 Clustering {len(hidden_reps)} states in {hidden_reps.shape[1]}-dim space")
+        
         kmeans = KMeans(n_clusters=target_states, random_state=42, n_init=10)
         cluster_labels = kmeans.fit_predict(hidden_reps)
+        
+        # Log cluster assignments
+        from collections import Counter
+        cluster_sizes = Counter(cluster_labels)
+        print(f"   🎯 K-means cluster sizes: {dict(cluster_sizes)}")
+        
+        # Compute silhouette score for clustering quality
+        if len(set(cluster_labels)) > 1:
+            from sklearn.metrics import silhouette_score
+            sil_score = silhouette_score(hidden_reps, cluster_labels)
+            print(f"   📈 Clustering quality (silhouette): {sil_score:.3f}")
         
         # Merge states within each cluster
         merged_states = []
@@ -258,6 +356,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
             
             if not cluster_indices:
                 continue
+            
+            print(f"   🔀 Cluster {cluster_id}: merging {len(cluster_indices)} states")
+            
+            # Log which states are being merged
+            merged_state_ids = [causal_states[idx]['id'] for idx in cluster_indices]
+            print(f"      Merging: {merged_state_ids}")
             
             # Merge all states in this cluster
             merged_suffixes = set()
@@ -294,7 +398,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
             }
             
             merged_states.append(merged_state)
+            
+            # Log final merged state info
+            print(f"      → Final state MCS_{cluster_id}: {len(merged_suffixes)} suffixes, count={total_count}")
+            print(f"         Emission: P(0)={merged_future_probs.get('0', 0):.3f}, P(1)={merged_future_probs.get('1', 0):.3f}")
         
+        print(f"\n✅ K-means fallback complete: {len(causal_states)} → {len(merged_states)} states")
         return merged_states
     
     def build_epsilon_machine(self, sequences: List[List[int]]) -> Dict:

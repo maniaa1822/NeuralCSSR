@@ -431,6 +431,79 @@ class GoldenMeanMachine:
         }
 
 
+class Custom3StateMachine:
+    """
+    Custom 3-state test machine with distinct probabilistic signatures.
+    
+    State Design (carefully chosen for maximum distinguishability):
+    - State A ("Zeros"): Strongly prefers 0 (0.8 vs 0.2) - "Zero-biased state"
+    - State B ("Ones"):  Strongly prefers 1 (0.2 vs 0.8) - "One-biased state"  
+    - State C ("Balanced"): Balanced (0.5 vs 0.5) - "Neutral state"
+    
+    Transition Structure (creates interesting dynamics):
+    - A → B (0.6), A → C (0.4)  [Zero state usually goes to One state]
+    - B → C (0.7), B → A (0.3)  [One state usually goes to Balanced]
+    - C → A (0.5), C → B (0.5)  [Balanced distributes evenly]
+    
+    This creates a "triangle" of transitions where each state has a distinct
+    role and emission pattern, making extraction validation straightforward.
+    """
+    
+    def __init__(self, alphabet: List[str] = ['0', '1'], seed: Optional[int] = None):
+        self.alphabet = alphabet
+        self.seed = seed
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+    
+    def create_machine(self) -> EpsilonMachine:
+        """Create the custom 3-state epsilon-machine."""
+        machine = EpsilonMachine(self.alphabet)
+        
+        # Add states with descriptive names
+        machine.add_state("A")  # Zero-biased state
+        machine.add_state("B")  # One-biased state
+        machine.add_state("C")  # Balanced state
+        machine.start_state = "A"
+        
+        # State A (Zero-biased): Strongly prefers 0 (0.8 vs 0.2)
+        # Transitions: A → B (0.6), A → C (0.4)
+        machine.add_transition("A", "0", "B", 0.48)  # 0.6 * 0.8: emit 0, go to B
+        machine.add_transition("A", "0", "C", 0.32)  # 0.4 * 0.8: emit 0, go to C
+        machine.add_transition("A", "1", "B", 0.12)  # 0.6 * 0.2: emit 1, go to B
+        machine.add_transition("A", "1", "C", 0.08)  # 0.4 * 0.2: emit 1, go to C
+        
+        # State B (One-biased): Strongly prefers 1 (0.2 vs 0.8)
+        # Transitions: B → C (0.7), B → A (0.3)
+        machine.add_transition("B", "0", "C", 0.14)  # 0.7 * 0.2: emit 0, go to C
+        machine.add_transition("B", "0", "A", 0.06)  # 0.3 * 0.2: emit 0, go to A
+        machine.add_transition("B", "1", "C", 0.56)  # 0.7 * 0.8: emit 1, go to C
+        machine.add_transition("B", "1", "A", 0.24)  # 0.3 * 0.8: emit 1, go to A
+        
+        # State C (Balanced): Equal preference (0.5 vs 0.5)
+        # Transitions: C → A (0.5), C → B (0.5)
+        machine.add_transition("C", "0", "A", 0.25)  # 0.5 * 0.5: emit 0, go to A
+        machine.add_transition("C", "0", "B", 0.25)  # 0.5 * 0.5: emit 0, go to B
+        machine.add_transition("C", "1", "A", 0.25)  # 0.5 * 0.5: emit 1, go to A
+        machine.add_transition("C", "1", "B", 0.25)  # 0.5 * 0.5: emit 1, go to B
+        
+        return machine
+    
+    def get_properties(self) -> Dict[str, Any]:
+        """Get machine properties for metadata."""
+        return {
+            'name': 'custom_3_state',
+            'num_states': 3,
+            'alphabet_size': len(self.alphabet),
+            'description': 'Custom 3-state machine with distinct probabilistic signatures for extraction validation',
+            'is_deterministic': False,
+            'is_topological': False,
+            'statistical_complexity': 1.585,  # log2(3) ≈ 1.585
+            'entropy_rate': 0.92,  # Estimated from mixed probabilistic transitions
+            'type': 'domain_specific'
+        }
+
+
 class SevenStateHumanSequenceMachine:
     """
     Seven-state human sequence prediction machine from Figure 3.
@@ -536,6 +609,7 @@ def create_domain_specific_machine(machine_type: str, alphabet: List[str] = ['0'
         'context_sensitive': ContextSensitiveMachine,
         'incompressible_counter': IncompressibleCounterMachine,
         'truly_incompressible': TrulyIncompressibleMachine,
+        'custom_3_state': Custom3StateMachine,
         'seven_state_human_sequence': SevenStateHumanSequenceMachine
     }
     
