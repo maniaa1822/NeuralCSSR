@@ -1,0 +1,54 @@
+# Configuration for training on distinct 4-state unifilar machine
+# This machine has well-separated emission patterns to test
+# neural-causal compatibility at moderate complexity level
+# between the simple 3-state and complex 6-state machines
+
+model:
+  type: sliding_window
+  vocab_size: 2        # Binary alphabet {0, 1}
+  d_model: 24          # Model dimension - same as successful configs
+  n_layers: 2          # Number of transformer layers
+  n_heads: 3           # Number of attention heads
+  window_size: 25      # Sliding window size for local attention
+  dropout: 0.1         # Dropout rate
+
+training:
+  epochs: 5            # Sufficient epochs for 4-state system
+  batch_size: 64       # Training batch size
+  learning_rate: 0.001 # Initial learning rate
+  weight_decay: 0.01   # L2 regularization
+  gradient_clipping: 1.0 # Gradient clipping
+  
+data:
+  train_path: "domain_machines/distinct_4_state/distinct_4_state/distinct_4_state.dat"
+  chunk_size: 25       # Same as window size
+  sliding_window: true # Enable overlapping windows for more training data
+  test_split: 0.1      # 10% for testing
+  
+experiment:
+  name: "sliding_window_distinct_4_state"
+  output_dir: "checkpoints/sliding_window_distinct_4_state"
+  
+logging:
+  log_interval: 100    # Log every N steps
+  eval_interval: 500   # Evaluate every N steps
+  save_best: true      # Save best checkpoint
+  
+generation:
+  eval_length: 1000    # Length for evaluation generation
+  temperature: 0.8     # Temperature for generation
+  seed: "1001"         # Seed for generation
+
+# Expected performance characteristics:
+# - 4 states with well-separated emission patterns:
+#   State A: 90% → 0, 10% → 1   (Strong 0 bias)
+#   State B: 10% → 0, 90% → 1   (Strong 1 bias)
+#   State C: 70% → 0, 30% → 1   (Moderate 0 bias)
+#   State D: 30% → 0, 70% → 1   (Moderate 1 bias)
+#
+# Hypothesis: The 4-state machine should provide a good balance
+# between complexity and distinguishability. With better emission
+# separation than the overlapping 3-state unifilar machine,
+# we expect improved neural-causal compatibility.
+# Target: Achieve >0.6 compatibility, bridging the gap between
+# 3-state (typically ~0.5-0.6) and 6-state (target >0.7) results.

@@ -24,13 +24,16 @@ from extract_fsm_sliding_window import SlidingWindowFSMExtractor
 class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
     """CSSR-enhanced FSM extraction using suffix trees + neural representations."""
     
-    def __init__(self, model, device, num_states=7, max_suffix_length=10, 
-                 significance_level=0.001, min_suffix_count=10):
+    def __init__(self, model, device, num_states=None, max_suffix_length=10, 
+                 significance_level=0.001, min_suffix_count=10,
+                 use_neural_test=True, use_classical_test=True):
         super().__init__(model, device, num_states)
         self.max_suffix_length = max_suffix_length
         self.significance_level = significance_level
         self.neural_threshold = 5.0  # Default neural threshold
         self.min_suffix_count = min_suffix_count  # For filtering sparse suffixes
+        self.use_neural_test = use_neural_test
+        self.use_classical_test = use_classical_test
         
         # CSSR-specific storage
         self.suffix_tree = {}
@@ -127,67 +130,91 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
     def test_suffix_equivalence(self, suffix1: str, suffix2: str) -> Dict:
         """Test if two suffixes are equivalent using both statistical and neural tests."""
         
-        # Classical CSSR: Chi-square test on future distributions
-        futures1 = self.suffix_futures[suffix1]
-        futures2 = self.suffix_futures[suffix2]
-        
-        # Get all possible future symbols
-        all_symbols = set(futures1.keys()) | set(futures2.keys())
-        
-        if len(all_symbols) < 2:
-            # Not enough data for chi-square test
-            classical_equivalent = True
-            chi2_pvalue = 1.0
-        else:
-            # Build contingency table
-            observed = []
-            for symbol in sorted(all_symbols):
-                observed.append([futures1.get(symbol, 0), futures2.get(symbol, 0)])
+        # Classical CSSR: Chi-square test on future distributions (only if enabled)
+        if self.use_classical_test:
+            futures1 = self.suffix_futures[suffix1]
+            futures2 = self.suffix_futures[suffix2]
             
-            observed = np.array(observed)
+            # Get all possible future symbols
+            all_symbols = set(futures1.keys()) | set(futures2.keys())
             
-            # Check if we have sufficient data for reliable chi-square test
-            total_obs = np.sum(observed)
-            min_expected = 5  # Standard chi-square requirement
-            
-            # Perform chi-square test
-            try:
-                chi2_stat, chi2_pvalue, _, expected = chi2_contingency(observed)
-                
-                # Check if chi-square assumptions are violated (expected frequencies too low)
-                if np.any(expected < min_expected) and total_obs < 20:
-                    # Classical CSSR struggles here - insufficient data for reliable test
-                    classical_equivalent = True  # Default to equivalent when data is sparse
-                    chi2_pvalue = 1.0  # Indicate unreliable test
-                else:
-                    classical_equivalent = chi2_pvalue > self.significance_level
-                    
-            except (ValueError, RuntimeWarning):
-                # Not enough data or other statistical issues
+            if len(all_symbols) < 2:
+                # Not enough data for chi-square test
                 classical_equivalent = True
                 chi2_pvalue = 1.0
+            else:
+                # Build contingency table
+                observed = []
+                for symbol in sorted(all_symbols):
+                    observed.append([futures1.get(symbol, 0), futures2.get(symbol, 0)])
+                
+                observed = np.array(observed)
+                
+                # Check if we have sufficient data for reliable chi-square test
+                total_obs = np.sum(observed)
+                min_expected = 5  # Standard chi-square requirement
+                
+                # Perform chi-square test
+                try:
+                    chi2_stat, chi2_pvalue, _, expected = chi2_contingency(observed)
+                    
+                    # Check if chi-square assumptions are violated (expected frequencies too low)
+                    if np.any(expected < min_expected) and total_obs < 20:
+                        # Classical CSSR struggles here - insufficient data for reliable test
+                        classical_equivalent = True  # Default to equivalent when data is sparse
+                        chi2_pvalue = 1.0  # Indicate unreliable test
+                    else:
+                        classical_equivalent = chi2_pvalue > self.significance_level
+                        
+                except (ValueError, RuntimeWarning):
+                    # Not enough data or other statistical issues
+                    classical_equivalent = True
+                    chi2_pvalue = 1.0
+        else:
+            # Classical test disabled - always equivalent
+            classical_equivalent = True
+            chi2_pvalue = 1.0
         
-        # Neural test: Compare hidden state distributions
-        hidden1 = self.suffix_hidden_states[suffix1]
-        hidden2 = self.suffix_hidden_states[suffix2]
-        
-        if len(hidden1) == 0 or len(hidden2) == 0:
+        # Neural test: Compare hidden state distributions (only if enabled)
+        if self.use_neural_test:
+            hidden1 = self.suffix_hidden_states[suffix1]
+            hidden2 = self.suffix_hidden_states[suffix2]
+            
+            if len(hidden1) == 0 or len(hidden2) == 0:
+                neural_equivalent = True
+                neural_distance = 0.0
+            else:
+                # Compare mean hidden states
+                mean1 = np.mean(hidden1, axis=0)
+                mean2 = np.mean(hidden2, axis=0)
+                neural_distance = np.linalg.norm(mean1 - mean2)
+                
+                # Threshold for neural equivalence (tunable parameter)
+                neural_threshold = getattr(self, 'neural_threshold', 5.0)
+                neural_equivalent = neural_distance < neural_threshold
+        else:
+            # Neural test disabled - always equivalent
             neural_equivalent = True
             neural_distance = 0.0
-        else:
-            # Compare mean hidden states
-            mean1 = np.mean(hidden1, axis=0)
-            mean2 = np.mean(hidden2, axis=0)
-            neural_distance = np.linalg.norm(mean1 - mean2)
-            
-            # Threshold for neural equivalence (tunable parameter)
-            neural_threshold = getattr(self, 'neural_threshold', 5.0)
-            neural_equivalent = neural_distance < neural_threshold
         
+        # Determine combined equivalence based on enabled tests
+        if self.use_classical_test and self.use_neural_test:
+            # Both tests enabled: both must agree
+            combined_equivalent = classical_equivalent and neural_equivalent
+        elif self.use_classical_test and not self.use_neural_test:
+            # Classical only
+            combined_equivalent = classical_equivalent
+        elif not self.use_classical_test and self.use_neural_test:
+            # Neural only
+            combined_equivalent = neural_equivalent
+        else:
+            # Neither test enabled - always equivalent (shouldn't happen)
+            combined_equivalent = True
+            
         return {
             'classical_equivalent': classical_equivalent,
             'neural_equivalent': neural_equivalent,
-            'combined_equivalent': classical_equivalent and neural_equivalent,
+            'combined_equivalent': combined_equivalent,
             'chi2_pvalue': chi2_pvalue,
             'neural_distance': neural_distance,
             'suffix1_count': self.suffix_tree[suffix1]['count'],
@@ -410,30 +437,51 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         """Build epsilon machine from causal states with proper probability preservation."""
         print("⚙️  Building epsilon machine from causal states...")
         
+        # Build suffix-to-state lookup for fast transitions
+        print("🔍 Building suffix-to-state lookup...")
+        suffix_to_state = {}
+        for state in self.causal_states:
+            for suffix in state['suffixes']:
+                suffix_to_state[suffix] = state['id']
+        print(f"✅ Indexed {len(suffix_to_state)} suffixes across {len(self.causal_states)} states")
+        
         # Build transition matrix between causal states
         state_transitions = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
         
         # For each causal state, determine transitions to other states
+        print("🔄 Computing state transitions...")
         for from_state_idx, from_state in enumerate(self.causal_states):
+            if from_state_idx % 4 == 0:
+                print(f"   Processing state {from_state_idx}/{len(self.causal_states)}")
+            
             from_id = from_state['id']
             
             # Count transitions by looking at suffix extensions
-            transition_counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # <-- FIXED
+            transition_counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
             
             for suffix in from_state['suffixes']:
-                # Look at all occurrences of this suffix
-                for context_idx in self.suffix_tree[suffix]['contexts']:
-                    for pos in self.suffix_tree[suffix]['positions']:
-                        # Look at actual next symbols in the data instead of trying all symbols
-                        if context_idx < len(sequences) and pos + 1 < len(sequences[context_idx]):
-                            next_symbol = str(sequences[context_idx][pos + 1])
-                            extended_suffix = suffix + next_symbol
-                            
-                            # Find which causal state contains this extended suffix
-                            for to_state_idx, to_state in enumerate(self.causal_states):
-                                if extended_suffix in to_state['suffixes']:
-                                    transition_counts[from_id][next_symbol][self.causal_states[to_state_idx]['id']] += 1
-                                    break
+                # Limit occurrences per suffix to speed up computation
+                contexts = self.suffix_tree[suffix]['contexts']
+                positions = self.suffix_tree[suffix]['positions']
+                
+                # Sample occurrences if there are too many (keep first 100 for stability)
+                max_occurrences = 100
+                if len(contexts) > max_occurrences:
+                    sample_indices = list(range(min(max_occurrences, len(contexts))))
+                    contexts = [contexts[i] for i in sample_indices]
+                    positions = [positions[i] for i in sample_indices]
+                
+                # Look at sampled occurrences of this suffix
+                for context_idx, pos in zip(contexts, positions):
+                    # Look at actual next symbols in the data instead of trying all symbols
+                    if context_idx < len(sequences) and pos + 1 < len(sequences[context_idx]):
+                        next_symbol = str(sequences[context_idx][pos + 1])
+                        extended_suffix = suffix + next_symbol
+                        
+                        # Fast lookup using prebuilt index
+                        if extended_suffix in suffix_to_state:
+                            to_state_id = suffix_to_state[extended_suffix]
+                            transition_counts[from_id][next_symbol][to_state_id] += 1
             
             # Normalize to probabilities
             for symbol in ['0', '1']:
@@ -535,16 +583,26 @@ def main():
     parser.add_argument('--max-sequences', type=int, default=500)
     parser.add_argument('--max-suffix-length', type=int, default=8)
     parser.add_argument('--significance', type=float, default=0.001)
+    parser.add_argument('--use-neural', action='store_true', default=True, help='Use neural component')
+    parser.add_argument('--no-neural', action='store_true', help='Disable neural component')
+    parser.add_argument('--use-classical', action='store_true', default=True, help='Use classical component')
+    parser.add_argument('--no-classical', action='store_true', help='Disable classical component')
     
     args = parser.parse_args()
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = load_model_from_checkpoint(args.checkpoint, device)
     
+    # Determine component flags
+    use_neural = args.use_neural and not args.no_neural
+    use_classical = args.use_classical and not args.no_classical
+    
     extractor = CSSREnhancedExtractor(
         model, device, 
         max_suffix_length=args.max_suffix_length,
-        significance_level=args.significance
+        significance_level=args.significance,
+        use_neural_test=use_neural,
+        use_classical_test=use_classical
     )
     
     epsilon_machine = extractor.extract_cssr_enhanced_fsm(
