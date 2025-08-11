@@ -305,6 +305,119 @@ class DistinctFourStateMachine(StatemachineGenerator):
             return self.send('d_emits_0') if self.rng.random() < 0.30 else self.send('d_emits_1')
 
 
+class SevenStateHumanMachine(StatemachineGenerator):
+    """
+    A UNIFILAR 7-state machine from Figure 3 - human sequence prediction study.
+    Features exact probabilities from research literature (multiples of 1/16).
+    
+    UNIFILAR CONSTRAINT: Each (state, symbol) pair has deterministic transitions.
+    Only the emission probabilities are stochastic.
+    
+    States represent sequence contexts from Figure 3:
+    {} (empty): 7/16 → 0, 9/16 → 1
+    AAA: 3/16 → 0, 13/16 → 1  
+    AAAB: 7/16 → 0, 9/16 → 1
+    BA: 7/16 → 0, 9/16 → 1
+    BAB: 8/16 → 0, 8/16 → 1
+    BAAB: 7/16 → 0, 9/16 → 1
+    BAA: 3/16 → 0, 13/16 → 1
+    
+    Transition structure (UNIFILAR - deterministic based on emitted symbol):
+    {} --0--> BA, {} --1--> AAA
+    AAA --0--> AAA, AAA --1--> AAAB
+    AAAB --0--> BAA, AAAB --1--> {}
+    BA --0--> BAA, BA --1--> BAB
+    BAB --0--> BAAB, BAB --1--> {}
+    BAAB --0--> BAA, BAAB --1--> {}
+    BAA --0--> AAA, BAA --1--> {}
+    """
+    # Define all 7 states
+    empty = State("EMPTY", initial=True)  # {} state (start)
+    aaa = State("AAA")
+    aaab = State("AAAB") 
+    ba = State("BA")
+    bab = State("BAB")
+    baab = State("BAAB")
+    baa = State("BAA")
+    
+    # UNIFILAR transitions: deterministic based on emitted symbol
+    # From EMPTY ({})
+    empty_emits_0 = empty.to(ba, on="on_emit_0")
+    empty_emits_1 = empty.to(aaa, on="on_emit_1")
+    
+    # From AAA
+    aaa_emits_0 = aaa.to(aaa, on="on_emit_0")      # Self-loop
+    aaa_emits_1 = aaa.to(aaab, on="on_emit_1")
+    
+    # From AAAB
+    aaab_emits_0 = aaab.to(baa, on="on_emit_0")
+    aaab_emits_1 = aaab.to(empty, on="on_emit_1")
+    
+    # From BA
+    ba_emits_0 = ba.to(baa, on="on_emit_0")
+    ba_emits_1 = ba.to(bab, on="on_emit_1")
+    
+    # From BAB
+    bab_emits_0 = bab.to(baab, on="on_emit_0")
+    bab_emits_1 = bab.to(empty, on="on_emit_1")
+    
+    # From BAAB
+    baab_emits_0 = baab.to(baa, on="on_emit_0")
+    baab_emits_1 = baab.to(empty, on="on_emit_1")
+    
+    # From BAA
+    baa_emits_0 = baa.to(aaa, on="on_emit_0")
+    baa_emits_1 = baa.to(empty, on="on_emit_1")
+    
+    def __init__(self, seed: int = None):
+        super().__init__(seed)
+        self.alphabet = ['0', '1']
+        # UNIFILAR: Each (state, symbol) → unique next state
+        self._transition_info = {
+            "EMPTY|0": [{"to_state": "BA", "probability": 1.0}],
+            "EMPTY|1": [{"to_state": "AAA", "probability": 1.0}],
+            "AAA|0": [{"to_state": "AAA", "probability": 1.0}],
+            "AAA|1": [{"to_state": "AAAB", "probability": 1.0}],
+            "AAAB|0": [{"to_state": "BAA", "probability": 1.0}],
+            "AAAB|1": [{"to_state": "EMPTY", "probability": 1.0}],
+            "BA|0": [{"to_state": "BAA", "probability": 1.0}],
+            "BA|1": [{"to_state": "BAB", "probability": 1.0}],
+            "BAB|0": [{"to_state": "BAAB", "probability": 1.0}],
+            "BAB|1": [{"to_state": "EMPTY", "probability": 1.0}],
+            "BAAB|0": [{"to_state": "BAA", "probability": 1.0}],
+            "BAAB|1": [{"to_state": "EMPTY", "probability": 1.0}],
+            "BAA|0": [{"to_state": "AAA", "probability": 1.0}],
+            "BAA|1": [{"to_state": "EMPTY", "probability": 1.0}],
+        }
+        
+    def on_emit_0(self) -> str: return '0'
+    def on_emit_1(self) -> str: return '1'
+    
+    def step(self) -> str:
+        current_state = self.current_state
+        if current_state == self.empty:
+            # EMPTY: 7/16 → 0, 9/16 → 1
+            return self.send('empty_emits_0') if self.rng.random() < 7/16 else self.send('empty_emits_1')
+        elif current_state == self.aaa:
+            # AAA: 3/16 → 0, 13/16 → 1
+            return self.send('aaa_emits_0') if self.rng.random() < 3/16 else self.send('aaa_emits_1')
+        elif current_state == self.aaab:
+            # AAAB: 7/16 → 0, 9/16 → 1
+            return self.send('aaab_emits_0') if self.rng.random() < 7/16 else self.send('aaab_emits_1')
+        elif current_state == self.ba:
+            # BA: 7/16 → 0, 9/16 → 1
+            return self.send('ba_emits_0') if self.rng.random() < 7/16 else self.send('ba_emits_1')
+        elif current_state == self.bab:
+            # BAB: 8/16 → 0, 8/16 → 1 (perfectly balanced)
+            return self.send('bab_emits_0') if self.rng.random() < 8/16 else self.send('bab_emits_1')
+        elif current_state == self.baab:
+            # BAAB: 7/16 → 0, 9/16 → 1
+            return self.send('baab_emits_0') if self.rng.random() < 7/16 else self.send('baab_emits_1')
+        else:  # BAA
+            # BAA: 3/16 → 0, 13/16 → 1
+            return self.send('baa_emits_0') if self.rng.random() < 3/16 else self.send('baa_emits_1')
+
+
 # --- Core Logic (Unchanged) ---
 
 def generate_sequence_with_states(machine: StatemachineGenerator, length: int) -> Tuple[str, List[int], Dict[str, int]]:
@@ -358,6 +471,7 @@ def create_machine(machine_type: str, seed: int = None) -> StatemachineGenerator
         'distinct_3_state': DistinctThreeStateMachine, # <-- NEW DISTINCT 3-STATE MACHINE
         'distinct_4_state': DistinctFourStateMachine, # <-- NEW 4-STATE MACHINE
         'distinct_6_state': DistinctSixStateMachine, # <-- NEW 6-STATE MACHINE
+        'seven_state_human': SevenStateHumanMachine, # <-- NEW UNIFILAR 7-STATE MACHINE
     }
     if machine_type not in machine_map:
         raise ValueError(f"Unknown machine type: {machine_type}. Available: {', '.join(machine_map.keys())}")
@@ -367,7 +481,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate machine datasets using python-statemachine.")
     parser.add_argument(
         '--machine', required=True,
-        choices=['biased_coin', 'alternating', 'golden_mean', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state'], # <-- ADDED CHOICE
+        choices=['biased_coin', 'alternating', 'golden_mean', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human'], # <-- ADDED 7-STATE CHOICE
         help="Type of domain-specific machine to generate from."
     )
     parser.add_argument('--length', type=int, default=100000, help="Length of sequence to generate.")
