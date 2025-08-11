@@ -28,7 +28,8 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
                  significance_level=0.001, min_suffix_count=10,
                  use_neural_test=True, use_classical_test=True,
                  use_information_theoretic_threshold=False, neural_threshold=5.0,
-                 use_emission_based_merging=False, emission_similarity_threshold=0.05):
+                 use_emission_based_merging=False, emission_similarity_threshold=0.05,
+                 verbose_discriminant=False):
         super().__init__(model, device, num_states)
         self.max_suffix_length = max_suffix_length
         self.significance_level = significance_level
@@ -39,6 +40,7 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         self.use_information_theoretic_threshold = use_information_theoretic_threshold
         self.use_emission_based_merging = use_emission_based_merging
         self.emission_similarity_threshold = emission_similarity_threshold
+        self.verbose_discriminant = verbose_discriminant
         
         # CSSR-specific storage
         self.suffix_tree = {}
@@ -314,8 +316,8 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
                 # Test equivalence
                 test_result = self.test_suffix_equivalence(suffix1, suffix2)
                 
-                # Log when neural vs classical disagree
-                if test_result['classical_equivalent'] != test_result['neural_equivalent']:
+                # Log when neural vs classical disagree (only if verbose mode enabled)
+                if self.verbose_discriminant and test_result['classical_equivalent'] != test_result['neural_equivalent']:
                     if test_result['neural_equivalent'] and not test_result['classical_equivalent']:
                         # Neural says merge, classical says separate - neural is discriminant
                         neural_discriminant_count += 1
@@ -326,6 +328,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
                         classical_discriminant_count += 1
                         print(f"   📊 CLASSICAL DISCRIMINANT: '{suffix1[:8]}...' ↔ '{suffix2[:8]}...' → SEPARATE")
                         print(f"      Classical: χ²={test_result['chi2_pvalue']:.4f} (merge), Neural: d={test_result['neural_distance']:.2f} (separate)")
+                elif test_result['classical_equivalent'] != test_result['neural_equivalent']:
+                    # Still count disagreements even when not printing details
+                    if test_result['neural_equivalent'] and not test_result['classical_equivalent']:
+                        neural_discriminant_count += 1
+                    elif test_result['classical_equivalent'] and not test_result['neural_equivalent']:
+                        classical_discriminant_count += 1
                 elif test_result['classical_equivalent'] and test_result['neural_equivalent']:
                     both_agree_merge += 1
                 else:
@@ -907,6 +915,8 @@ def main():
                        help='Merge states with similar emission patterns')
     parser.add_argument('--emission-similarity-threshold', type=float, default=0.05,
                        help='Maximum difference in emission probabilities for merging')
+    parser.add_argument('--verbose-discriminant', action='store_true',
+                       help='Show detailed discriminant messages when classical and neural tests disagree')
     
     args = parser.parse_args()
     
@@ -926,7 +936,8 @@ def main():
         neural_threshold=args.neural_threshold,
         use_information_theoretic_threshold=args.use_information_theoretic_threshold,
         use_emission_based_merging=args.use_emission_based_merging,
-        emission_similarity_threshold=args.emission_similarity_threshold
+        emission_similarity_threshold=args.emission_similarity_threshold,
+        verbose_discriminant=args.verbose_discriminant
     )
     
     epsilon_machine = extractor.extract_cssr_enhanced_fsm(
