@@ -6,7 +6,7 @@ Creates a single long sequence from a domain-specific epsilon-machine
 with aligned state trajectories for linear probe training.
 
 Usage:
-    python generate_domain_dataset.py --machine even_process --length 100000 --output data/even_process
+    python generate_domain_dataset.py --machine biased_coin --length 100000 --output data/biased_coin
     python generate_domain_dataset.py --machine golden_mean --length 50000 --output data/golden_mean --seed 42
 """
 
@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from neural_cssr.machines.domain_specific import (
-    EvenProcessMachine, AlternatingMachine, IncompressibleCounterMachine,
+    BiasedCoinMachine, AlternatingMachine, IncompressibleCounterMachine,
     TrulyIncompressibleMachine, ContextSensitiveMachine, Period4Machine, 
     GoldenMeanMachine, SevenStateHumanSequenceMachine
 )
@@ -156,7 +156,7 @@ def create_machine(machine_type: str, seed: int = None) -> Tuple[EpsilonMachine,
         Tuple of (machine, machine_type_name)
     """
     machine_builders = {
-        'even_process': EvenProcessMachine,
+        'biased_coin': BiasedCoinMachine,
         'alternating': AlternatingMachine,
         'incompressible_counter': IncompressibleCounterMachine,
         'truly_incompressible': TrulyIncompressibleMachine,
@@ -184,7 +184,7 @@ def parse_args():
     parser.add_argument(
         '--machine', 
         required=True,
-        choices=['even_process', 'alternating', 'incompressible_counter', 'truly_incompressible', 
+        choices=['biased_coin', 'alternating', 'incompressible_counter', 'truly_incompressible', 
                 'context_sensitive', 'period4', 'golden_mean', 'seven_state_human'],
         help="Type of domain-specific machine to generate from"
     )
@@ -197,7 +197,7 @@ def parse_args():
     parser.add_argument(
         '--output', 
         required=True,
-        help="Base output directory (e.g., 'data' -> creates 'data/even_process/' subfolder)"
+        help="Base output directory (e.g., 'data' -> creates 'data/biased_coin/' subfolder)"
     )
     parser.add_argument(
         '--seed', 

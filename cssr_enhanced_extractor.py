@@ -16,7 +16,7 @@ from typing import Dict, List, Tuple, Set
 from collections import defaultdict, Counter
 from scipy.stats import chi2_contingency
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, mutual_info_score
 
 from extract_fsm_sliding_window import SlidingWindowFSMExtractor
 
@@ -26,14 +26,19 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
     
     def __init__(self, model, device, num_states=None, max_suffix_length=10, 
                  significance_level=0.001, min_suffix_count=10,
-                 use_neural_test=True, use_classical_test=True):
+                 use_neural_test=True, use_classical_test=True,
+                 use_information_theoretic_threshold=False, neural_threshold=5.0,
+                 use_emission_based_merging=False, emission_similarity_threshold=0.05):
         super().__init__(model, device, num_states)
         self.max_suffix_length = max_suffix_length
         self.significance_level = significance_level
-        self.neural_threshold = 5.0  # Default neural threshold
+        self.neural_threshold = neural_threshold  # Default neural threshold
         self.min_suffix_count = min_suffix_count  # For filtering sparse suffixes
         self.use_neural_test = use_neural_test
         self.use_classical_test = use_classical_test
+        self.use_information_theoretic_threshold = use_information_theoretic_threshold
+        self.use_emission_based_merging = use_emission_based_merging
+        self.emission_similarity_threshold = emission_similarity_threshold
         
         # CSSR-specific storage
         self.suffix_tree = {}
@@ -56,10 +61,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
             
             # Extract all suffixes up to max length
             for i in range(len(sequence)):
-                for length in range(1, min(self.max_suffix_length + 1, len(sequence) - i + 1)):
-                    # Get suffix
-                    suffix_start = max(0, i - length + 1)
-                    suffix = seq_str[suffix_start:i+1]
+                # Only consider valid suffix lengths that end at position i
+                max_len_at_pos = min(self.max_suffix_length, i + 1)
+                for length in range(1, max_len_at_pos + 1):
+                    # Get suffix ending at i with given length
+                    suffix_start = i - length + 1
+                    suffix = seq_str[suffix_start:i + 1]
                     
                     # Record suffix occurrence
                     if suffix not in self.suffix_tree:
@@ -126,6 +133,61 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         
         print(f"✅ Built suffix tree with {len(self.suffix_tree)} suffixes (was {pre_filter_count})")
         print(f"   Suffix lengths: {sorted(set(len(s) for s in self.suffix_tree.keys()))}")
+        
+        # Compute information-theoretic threshold if enabled
+        if self.use_information_theoretic_threshold:
+            self._compute_information_theoretic_threshold()
+    
+    def _compute_information_theoretic_threshold(self) -> None:
+        """Compute optimal neural threshold using information theory."""
+        print("🧮 Computing information-theoretic neural threshold...")
+        
+        # Collect all pairwise neural distances and suffix futures
+        suffix_distances = {}
+        suffixes = list(self.suffix_tree.keys())
+        
+        print(f"   Computing distances for {len(suffixes)} suffixes...")
+        
+        # Compute pairwise neural distances for a sample of suffix pairs
+        max_pairs = 5000  # Limit for computational efficiency
+        pairs_computed = 0
+        
+        for i, suffix1 in enumerate(suffixes):
+            if pairs_computed >= max_pairs:
+                break
+                
+            for j in range(i + 1, len(suffixes)):
+                suffix2 = suffixes[j]
+                
+                if pairs_computed >= max_pairs:
+                    break
+                
+                # Get hidden states for both suffixes
+                hidden1 = self.suffix_hidden_states.get(suffix1, [])
+                hidden2 = self.suffix_hidden_states.get(suffix2, [])
+                
+                if len(hidden1) > 0 and len(hidden2) > 0:
+                    # Compute neural distance
+                    mean1 = np.mean(hidden1, axis=0)
+                    mean2 = np.mean(hidden2, axis=0)
+                    neural_distance = np.linalg.norm(mean1 - mean2)
+                    
+                    suffix_distances[(suffix1, suffix2)] = neural_distance
+                    pairs_computed += 1
+        
+        print(f"   Computed {pairs_computed} pairwise distances")
+        
+        # Use information-theoretic method to find optimal threshold
+        if suffix_distances:
+            optimal_threshold = information_theoretic_threshold(
+                suffix_distances, 
+                self.suffix_futures
+            )
+            
+            print(f"🎯 Information-theoretic threshold: {optimal_threshold:.3f} (was {self.neural_threshold:.3f})")
+            self.neural_threshold = optimal_threshold
+        else:
+            print("⚠️  No valid suffix pairs found, keeping default threshold")
     
     def test_suffix_equivalence(self, suffix1: str, suffix2: str) -> Dict:
         """Test if two suffixes are equivalent using both statistical and neural tests."""
@@ -337,6 +399,12 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         
         print(f"✅ Built {len(self.causal_states)} causal states")
         
+        # Apply emission-based merging if enabled
+        if self.use_emission_based_merging:
+            print(f"🔄 Applying emission-based merging (threshold: {self.emission_similarity_threshold})")
+            self.causal_states = self._merge_by_emission_similarity(self.causal_states)
+            print(f"✅ After emission-based merging: {len(self.causal_states)} states")
+        
         # Skip K-means fallback - show raw CSSR+neural results
         if hasattr(self, 'num_states') and self.num_states and len(self.causal_states) > self.num_states * 2:
             print(f"ℹ️  CSSR+neural produced {len(self.causal_states)} states (target: {self.num_states})")
@@ -347,6 +415,98 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
             print(f"✅ Natural discovery mode: keeping all {len(self.causal_states)} discovered states")
         else:
             print(f"✅ CSSR+neural produced {len(self.causal_states)} states (within acceptable range for target: {getattr(self, 'num_states', 'unspecified')})")
+    
+    def _merge_by_emission_similarity(self, causal_states: List[Dict]) -> List[Dict]:
+        """Merge causal states with similar emission patterns."""
+        print(f"   🔍 Testing emission similarities among {len(causal_states)} states...")
+        
+        merged_states = []
+        processed = set()
+        merge_count = 0
+        
+        for i, state1 in enumerate(causal_states):
+            if i in processed:
+                continue
+                
+            # Start a new merged group with this state
+            states_to_merge = [state1]
+            processed.add(i)
+            
+            # Find states with similar emission patterns
+            for j, state2 in enumerate(causal_states[i+1:], i+1):
+                if j in processed:
+                    continue
+                    
+                # Calculate emission pattern similarity
+                p1 = state1['future_probabilities']
+                p2 = state2['future_probabilities']
+                
+                # Get common symbols
+                symbols = set(p1.keys()) | set(p2.keys())
+                if not symbols:
+                    continue
+                
+                # Calculate maximum absolute difference
+                max_diff = 0.0
+                for symbol in symbols:
+                    diff = abs(p1.get(symbol, 0.0) - p2.get(symbol, 0.0))
+                    max_diff = max(max_diff, diff)
+                
+                # Merge if within threshold
+                if max_diff <= self.emission_similarity_threshold:
+                    states_to_merge.append(state2)
+                    processed.add(j)
+                    print(f"      Merging {state1['id']} with {state2['id']} (max_diff: {max_diff:.3f})")
+                    merge_count += 1
+            
+            # Create merged state
+            if len(states_to_merge) == 1:
+                # No merging needed
+                merged_states.append(state1)
+            else:
+                # Merge multiple states
+                merged_suffixes = set()
+                merged_futures = defaultdict(float)
+                merged_hidden_states = []
+                total_count = 0
+                
+                for state in states_to_merge:
+                    merged_suffixes.update(state['suffixes'])
+                    
+                    # Weight by count for proper averaging
+                    for symbol, prob in state['future_probabilities'].items():
+                        merged_futures[symbol] += prob * state['count']
+                    
+                    merged_hidden_states.append(state['representative_hidden'])
+                    total_count += state['count']
+                
+                # Normalize probabilities
+                if total_count > 0:
+                    merged_future_probs = {
+                        symbol: count / total_count 
+                        for symbol, count in merged_futures.items()
+                    }
+                else:
+                    merged_future_probs = {}
+                
+                merged_state = {
+                    'id': f'MES_{len(merged_states)}',  # MES = Merged Emission State
+                    'suffixes': merged_suffixes,
+                    'future_probabilities': merged_future_probs,
+                    'representative_hidden': np.mean(merged_hidden_states, axis=0),
+                    'count': total_count,
+                    'size': len(merged_suffixes)
+                }
+                
+                merged_states.append(merged_state)
+                
+                # Log the merge
+                state_ids = [s['id'] for s in states_to_merge]
+                print(f"   ➡️  Created {merged_state['id']} from {state_ids}")
+                print(f"      Final emission: P(0)={merged_future_probs.get('0', 0):.3f}, P(1)={merged_future_probs.get('1', 0):.3f}")
+        
+        print(f"   📊 Emission-based merging: {len(causal_states)} → {len(merged_states)} states ({merge_count} merges)")
+        return merged_states
     
     def merge_similar_causal_states(self, causal_states: List[Dict], target_states: int) -> List[Dict]:
         """Merge similar causal states using hidden state similarity."""
@@ -571,6 +731,159 @@ class CSSREnhancedExtractor(SlidingWindowFSMExtractor):
         print(f"✅ CSSR-enhanced results saved to {output_file}")
 
 
+def kl_divergence(p: Dict[str, float], q: Dict[str, float], epsilon: float = 1e-10) -> float:
+    """Calculate KL divergence between two probability distributions."""
+    if not p or not q:
+        return 0.0
+    
+    # Get all symbols from both distributions
+    all_symbols = set(p.keys()) | set(q.keys())
+    
+    # Convert to arrays with smoothing for numerical stability
+    p_probs = np.array([p.get(symbol, epsilon) for symbol in sorted(all_symbols)])
+    q_probs = np.array([q.get(symbol, epsilon) for symbol in sorted(all_symbols)])
+    
+    # Normalize to ensure they sum to 1
+    p_probs = p_probs / np.sum(p_probs)
+    q_probs = q_probs / np.sum(q_probs)
+    
+    # Calculate KL divergence: KL(P||Q) = sum(P * log(P/Q))
+    return np.sum(p_probs * np.log(p_probs / q_probs))
+
+
+def mutual_information(x: np.ndarray, y: np.ndarray) -> float:
+    """Calculate mutual information between two binary arrays."""
+    # Convert to discrete bins for mutual_info_score
+    x_discrete = x.astype(int)
+    y_discrete = y.astype(int)
+    
+    return mutual_info_score(x_discrete, y_discrete)
+
+
+def find_elbow_point(curve: List[Tuple[float, float]], method: str = 'max_curvature') -> float:
+    """Find elbow point in a curve using maximum curvature method."""
+    if len(curve) < 3:
+        return curve[-1][0] if curve else 0.0
+    
+    thresholds = np.array([point[0] for point in curve])
+    values = np.array([point[1] for point in curve])
+    
+    if method == 'max_curvature':
+        # Calculate second derivative (curvature)
+        if len(values) < 3:
+            return thresholds[np.argmax(values)]
+        
+        # Smooth the curve and find maximum curvature
+        first_deriv = np.gradient(values)
+        second_deriv = np.gradient(first_deriv)
+        
+        # Find point of maximum curvature (absolute value)
+        max_curvature_idx = np.argmax(np.abs(second_deriv))
+        return thresholds[max_curvature_idx]
+    
+    elif method == 'plateau':
+        # Find where the curve plateaus (derivative approaches zero)
+        if len(values) < 2:
+            return thresholds[-1]
+        
+        first_deriv = np.gradient(values)
+        # Find where derivative is closest to zero after initial increase
+        min_deriv_idx = np.argmin(np.abs(first_deriv[len(first_deriv)//3:]))
+        return thresholds[min_deriv_idx + len(first_deriv)//3]
+    
+    else:
+        # Default: return point of maximum MI
+        max_mi_idx = np.argmax(values)
+        return thresholds[max_mi_idx]
+
+
+def information_theoretic_threshold(suffix_distances: Dict[Tuple[str, str], float], 
+                                  suffix_futures: Dict[str, Dict[str, int]],
+                                  num_thresholds: int = 100,
+                                  future_similarity_threshold: float = 0.1) -> float:
+    """Derive threshold from mutual information between neural distance and future divergence.
+    
+    Args:
+        suffix_distances: Dictionary mapping (suffix1, suffix2) -> neural_distance
+        suffix_futures: Dictionary mapping suffix -> {symbol: count}
+        num_thresholds: Number of threshold points to test
+        future_similarity_threshold: KL divergence threshold for considering futures similar
+    
+    Returns:
+        Optimal neural distance threshold that maximizes mutual information
+    """
+    if not suffix_distances or not suffix_futures:
+        return 5.0  # Default fallback
+    
+    # Convert future counts to probabilities
+    suffix_future_probs = {}
+    for suffix, future_counts in suffix_futures.items():
+        total_count = sum(future_counts.values())
+        if total_count > 0:
+            suffix_future_probs[suffix] = {
+                symbol: count / total_count 
+                for symbol, count in future_counts.items()
+            }
+        else:
+            suffix_future_probs[suffix] = {}
+    
+    # Compute KL divergence between future distributions and collect neural distances
+    future_divergences = []
+    neural_distances = []
+    
+    for (s1, s2), neural_dist in suffix_distances.items():
+        if s1 in suffix_future_probs and s2 in suffix_future_probs:
+            kl_div = kl_divergence(suffix_future_probs[s1], suffix_future_probs[s2])
+            future_divergences.append(kl_div)
+            neural_distances.append(neural_dist)
+    
+    if len(neural_distances) < 10:
+        print(f"⚠️  Warning: Only {len(neural_distances)} suffix pairs for threshold estimation")
+        return 5.0  # Default fallback
+    
+    neural_distances = np.array(neural_distances)
+    future_divergences = np.array(future_divergences)
+    
+    # Test range of thresholds
+    min_dist = np.min(neural_distances)
+    max_dist = np.max(neural_distances)
+    thresholds = np.linspace(min_dist, max_dist, num_thresholds)
+    
+    mi_curve = []
+    
+    for threshold in thresholds:
+        # Binary indicators: neural similarity and future similarity
+        neural_similar = (neural_distances < threshold).astype(int)
+        future_similar = (future_divergences < future_similarity_threshold).astype(int)
+        
+        # Calculate mutual information between these binary variables
+        try:
+            mi = mutual_information(neural_similar, future_similar)
+            mi_curve.append((threshold, mi))
+        except Exception:
+            # Skip problematic thresholds
+            mi_curve.append((threshold, 0.0))
+    
+    if not mi_curve:
+        return 5.0  # Default fallback
+    
+    # Find optimal threshold using elbow point detection
+    optimal_threshold = find_elbow_point(mi_curve, method='max_curvature')
+    
+    # Log analysis results
+    max_mi = max(point[1] for point in mi_curve)
+    optimal_mi = next((mi for thresh, mi in mi_curve if abs(thresh - optimal_threshold) < 1e-6), max_mi)
+    
+    print(f"📊 Information-theoretic threshold analysis:")
+    print(f"   Neural distance range: [{min_dist:.3f}, {max_dist:.3f}]")
+    print(f"   Tested {len(mi_curve)} thresholds")
+    print(f"   Maximum MI: {max_mi:.4f}")
+    print(f"   Optimal threshold: {optimal_threshold:.3f} (MI: {optimal_mi:.4f})")
+    print(f"   {np.sum(neural_distances < optimal_threshold)} of {len(neural_distances)} pairs below threshold")
+    
+    return optimal_threshold
+
+
 def main():
     import argparse
     from extract_fsm_sliding_window import load_model_from_checkpoint
@@ -587,6 +900,13 @@ def main():
     parser.add_argument('--no-neural', action='store_true', help='Disable neural component')
     parser.add_argument('--use-classical', action='store_true', default=True, help='Use classical component')
     parser.add_argument('--no-classical', action='store_true', help='Disable classical component')
+    parser.add_argument('--neural-threshold', type=float, default=5.0, help='Neural distance threshold')
+    parser.add_argument('--use-information-theoretic-threshold', action='store_true', 
+                       help='Use information-theoretic method to determine neural threshold')
+    parser.add_argument('--use-emission-based-merging', action='store_true',
+                       help='Merge states with similar emission patterns')
+    parser.add_argument('--emission-similarity-threshold', type=float, default=0.05,
+                       help='Maximum difference in emission probabilities for merging')
     
     args = parser.parse_args()
     
@@ -602,7 +922,11 @@ def main():
         max_suffix_length=args.max_suffix_length,
         significance_level=args.significance,
         use_neural_test=use_neural,
-        use_classical_test=use_classical
+        use_classical_test=use_classical,
+        neural_threshold=args.neural_threshold,
+        use_information_theoretic_threshold=args.use_information_theoretic_threshold,
+        use_emission_based_merging=args.use_emission_based_merging,
+        emission_similarity_threshold=args.emission_similarity_threshold
     )
     
     epsilon_machine = extractor.extract_cssr_enhanced_fsm(

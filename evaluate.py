@@ -134,10 +134,12 @@ def generate_sequence(model, device: torch.device, length: int = 1000,
             generated.append(str(next_token))
             tokens.append(next_token)
             
-            # Keep a longer context window for better patterns
-            # Seven-state machine may need longer context
-            if len(tokens) > 50:
-                tokens = tokens[-25:]  # Keep last 25 tokens (chunk size from training)
+            # Keep a sliding context roughly matching training window
+            window_size = getattr(getattr(model, 'window_size', None), 'value', None)
+            if window_size is None:
+                window_size = getattr(model, 'window_size', 25)
+            if len(tokens) > max(2 * window_size, 50):
+                tokens = tokens[-window_size:]
     
     return ''.join(generated)
 

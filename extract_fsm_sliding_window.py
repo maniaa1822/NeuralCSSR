@@ -429,7 +429,7 @@ def main():
                        help='Output directory for results')
     parser.add_argument('--num-states', type=int, default=7,
                        help='Number of FSM states to extract')
-    parser.add_argument('--max-sequences', type=int, default=1000,
+    parser.add_argument('--max-sequences', type=int, default=10000,
                        help='Maximum sequences to process')
     parser.add_argument('--chunk-size', type=int, default=25,
                        help='Chunk size (should match training)')

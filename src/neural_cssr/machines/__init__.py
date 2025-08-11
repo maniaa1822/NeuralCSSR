@@ -8,14 +8,14 @@ This module provides various epsilon-machine implementations:
 """
 
 from .domain_specific import (
-    EvenProcessMachine,
+    BiasedCoinMachine,
     AlternatingMachine,
     GoldenMeanMachine,
     create_domain_specific_machine
 )
 
 __all__ = [
-    'EvenProcessMachine',
+    'BiasedCoinMachine',
     'AlternatingMachine', 
     'GoldenMeanMachine',
     'create_domain_specific_machine'

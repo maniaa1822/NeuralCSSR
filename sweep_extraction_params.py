@@ -38,7 +38,7 @@ from extract_fsm_sliding_window import load_model_from_checkpoint
 class ExtractionConfig:
     """Configuration for CSSR-enhanced FSM extraction parameters."""
     # Core CSSR parameters
-    num_states: Optional[int] = 3
+    num_states: Optional[int] = 7
     target_states: Optional[int] = None  # None = natural discovery, int = forced count
     max_suffix_length: int = 8
     significance_level: float = 0.001
@@ -94,12 +94,12 @@ def define_hyperparameter_space(phase: str = '1') -> Dict[str, List]:
         # Test performance at very long suffix lengths where classical CSSR struggles most
         return {
             'target_states': [None, 7],  # Test both natural discovery and forced
-            'max_suffix_length': [12, 15],  # Focus on lengths where classical CSSR fails
-            'significance_level': [0.001, 0.01],  # Conservative and moderate
-            'neural_threshold': [5.0],  # Fixed optimal value from previous tests
+            'max_suffix_length': [6],  # Focus on lengths where classical CSSR fails
+            'significance_level': [0.01],  # Conservative and moderate
+            'neural_threshold': [5],  # Fixed optimal value from previous tests
             'min_suffix_count': [3, 5],  # Very low counts for sparse long suffixes
-            'max_sequences': [500],  # More data to handle sparsity
-            'use_neural_test': [True],
+            'max_sequences': [200],  # More data to handle sparsity
+            'use_neural_test': [False],
             'use_classical_test': [True], 
             'merge_method': ['kmeans'],
             'alignment_distance': ['frobenius'],
@@ -125,7 +125,7 @@ def define_hyperparameter_space(phase: str = '1') -> Dict[str, List]:
     elif phase == 'test':
         # Minimal test sweep - just 4 combinations to verify pipeline works
         return {
-            'target_states': [None, 7],  # Test natural vs forced
+            'target_states': [None],  # Test natural vs forced
             'significance_level': [0.001, 0.01],  # Test conservative vs moderate
             'neural_threshold': [5.0],  # Fixed 
             'min_suffix_count': [10],  # Fixed
@@ -297,6 +297,8 @@ def run_single_extraction(extractor: CSSREnhancedExtractor, config: ExtractionCo
     extractor.max_suffix_length = config.max_suffix_length
     extractor.significance_level = config.significance_level
     extractor.min_suffix_count = config.min_suffix_count
+    extractor.use_neural_test = config.use_neural_test
+    extractor.use_classical_test = config.use_classical_test
     
     # Handle target_states parameter (may be None for natural discovery)
     if hasattr(config, 'target_states') and config.target_states is not None:

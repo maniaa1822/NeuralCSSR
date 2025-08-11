@@ -11,18 +11,23 @@ import numpy as np
 from ..core.epsilon_machine import EpsilonMachine
 
 
-class EvenProcessMachine:
+class BiasedCoinMachine:
     """
-    Even process epsilon-machine implementation.
+    Biased coin process - a proper 2-state generative machine with different emission probabilities.
     
-    The even process is a 2-state machine that tracks the parity of 
-    the number of 1s seen so far:
-    - State 0 (Even): even number of 1s seen
-    - State 1 (Odd): odd number of 1s seen
+    This creates a machine where different states have different symbol emission probabilities,
+    ensuring that CSSR can distinguish the states based on future distributions:
     
-    Transitions:
-    - From Even state: emit 0 (stay Even) or emit 1 (go to Odd)
-    - From Odd state: emit 0 (stay Odd) or emit 1 (go to Even)
+    - State A ("Bias0"): Strongly prefers 0 (prob 0.8) over 1 (prob 0.2)
+    - State B ("Bias1"): Strongly prefers 1 (prob 0.7) over 0 (prob 0.3)
+    
+    Transitions create alternating behavior:
+    - From State A: always go to State B (regardless of emission)
+    - From State B: always go to State A (regardless of emission)
+    
+    This creates clear future predictability differences:
+    - After being in State A: next emission will be biased toward 1 (State B behavior)
+    - After being in State B: next emission will be biased toward 0 (State A behavior)
     """
     
     def __init__(self, alphabet: List[str] = ['0', '1'], seed: Optional[int] = None):
@@ -33,36 +38,35 @@ class EvenProcessMachine:
             np.random.seed(seed)
     
     def create_machine(self) -> EpsilonMachine:
-        """Create the even process epsilon-machine."""
+        """Create the biased coin epsilon-machine."""
         machine = EpsilonMachine(self.alphabet)
         
-        # Add states
-        machine.add_state("Even")  # State for even parity
-        machine.add_state("Odd")   # State for odd parity
-        machine.start_state = "Even"
+        # Add states with distinct emission biases
+        machine.add_state("Bias0")  # State that prefers emitting 0
+        machine.add_state("Bias1")  # State that prefers emitting 1
+        machine.start_state = "Bias0"
         
-        # Add transitions based on even process logic
-        # From Even state:
-        machine.add_transition("Even", "0", "Even", 0.5)  # Stay even
-        machine.add_transition("Even", "1", "Odd", 0.5)   # Go to odd
+        # State A (Bias0): Strongly prefers 0, always transitions to Bias1
+        machine.add_transition("Bias0", "0", "Bias1", 0.8)  # Emit 0 with high prob, go to Bias1
+        machine.add_transition("Bias0", "1", "Bias1", 0.2)  # Emit 1 with low prob, go to Bias1
         
-        # From Odd state:
-        machine.add_transition("Odd", "0", "Odd", 0.5)    # Stay odd
-        machine.add_transition("Odd", "1", "Even", 0.5)   # Go to even
+        # State B (Bias1): Strongly prefers 1, always transitions to Bias0  
+        machine.add_transition("Bias1", "0", "Bias0", 0.3)  # Emit 0 with low prob, go to Bias0
+        machine.add_transition("Bias1", "1", "Bias0", 0.7)  # Emit 1 with high prob, go to Bias0
         
         return machine
     
     def get_properties(self) -> Dict[str, Any]:
         """Get machine properties for metadata."""
         return {
-            'name': 'even_process',
+            'name': 'biased_coin',
             'num_states': 2,
             'alphabet_size': len(self.alphabet),
-            'description': 'Even process - tracks parity of number of 1s',
-            'is_deterministic': True,
-            'is_topological': True,
+            'description': 'Biased coin process - 2-state machine with different emission probabilities per state',
+            'is_deterministic': False,
+            'is_topological': False,
             'statistical_complexity': 1.0,  # log2(2) = 1.0
-            'entropy_rate': 1.0,  # Both symbols equally likely
+            'entropy_rate': 0.89,  # Estimated from mixed probabilities
             'type': 'domain_specific'
         }
 
@@ -602,7 +606,7 @@ def create_domain_specific_machine(machine_type: str, alphabet: List[str] = ['0'
         Dictionary containing machine and properties
     """
     machine_classes = {
-        'even_process': EvenProcessMachine,
+        'biased_coin': BiasedCoinMachine,
         'alternating': AlternatingMachine,
         'golden_mean': GoldenMeanMachine,
         'period4': Period4Machine,
