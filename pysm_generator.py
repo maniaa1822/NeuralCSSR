@@ -305,6 +305,100 @@ class DistinctFourStateMachine(StatemachineGenerator):
             return self.send('d_emits_0') if self.rng.random() < 0.30 else self.send('d_emits_1')
 
 
+class AntiCompressionMachine(StatemachineGenerator):
+    """
+    A UNIFILAR 5-state machine designed to resist neural compression.
+    Features maximally separated emission patterns and adversarial suffix structure.
+    
+    UNIFILAR CONSTRAINT: Each (state, symbol) pair has deterministic transitions.
+    Only the emission probabilities are stochastic.
+    
+    ANTI-COMPRESSION DESIGN:
+    - Maximum emission diversity: no two states have similar P(0), P(1)
+    - Adversarial transitions: create distinct neural hidden state clusters
+    - Complex reachability: every state can reach every other state
+    
+    Emission patterns (maximally separated):
+    A: 99% → 0, 1% → 1   (Extreme 0-bias)
+    B: 1% → 0, 99% → 1   (Extreme 1-bias)  
+    C: 80% → 0, 20% → 1  (Strong 0-bias)
+    D: 20% → 0, 80% → 1  (Strong 1-bias)
+    E: 50% → 0, 50% → 1  (Balanced)
+    
+    UNIFILAR transition structure (adversarial design):
+    A --0--> B, A --1--> C
+    B --0--> D, B --1--> A  
+    C --0--> E, C --1--> B
+    D --0--> A, D --1--> E
+    E --0--> C, E --1--> D
+    """
+    # Define all 5 states
+    state_a = State("A", initial=True)
+    state_b = State("B")
+    state_c = State("C") 
+    state_d = State("D")
+    state_e = State("E")
+    
+    # UNIFILAR transitions: deterministic based on emitted symbol
+    # From A
+    a_emits_0 = state_a.to(state_b, on="on_emit_0")
+    a_emits_1 = state_a.to(state_c, on="on_emit_1")
+    
+    # From B
+    b_emits_0 = state_b.to(state_d, on="on_emit_0")
+    b_emits_1 = state_b.to(state_a, on="on_emit_1")
+    
+    # From C
+    c_emits_0 = state_c.to(state_e, on="on_emit_0")
+    c_emits_1 = state_c.to(state_b, on="on_emit_1")
+    
+    # From D
+    d_emits_0 = state_d.to(state_a, on="on_emit_0")
+    d_emits_1 = state_d.to(state_e, on="on_emit_1")
+    
+    # From E
+    e_emits_0 = state_e.to(state_c, on="on_emit_0")
+    e_emits_1 = state_e.to(state_d, on="on_emit_1")
+    
+    def __init__(self, seed: int = None):
+        super().__init__(seed)
+        self.alphabet = ['0', '1']
+        # UNIFILAR: Each (state, symbol) → unique next state
+        self._transition_info = {
+            "A|0": [{"to_state": "B", "probability": 1.0}],
+            "A|1": [{"to_state": "C", "probability": 1.0}],
+            "B|0": [{"to_state": "D", "probability": 1.0}],
+            "B|1": [{"to_state": "A", "probability": 1.0}],
+            "C|0": [{"to_state": "E", "probability": 1.0}],
+            "C|1": [{"to_state": "B", "probability": 1.0}],
+            "D|0": [{"to_state": "A", "probability": 1.0}],
+            "D|1": [{"to_state": "E", "probability": 1.0}],
+            "E|0": [{"to_state": "C", "probability": 1.0}],
+            "E|1": [{"to_state": "D", "probability": 1.0}],
+        }
+        
+    def on_emit_0(self) -> str: return '0'
+    def on_emit_1(self) -> str: return '1'
+    
+    def step(self) -> str:
+        current_state = self.current_state
+        if current_state == self.state_a:
+            # State A: 99% → 0, 1% → 1 (Extreme 0-bias)
+            return self.send('a_emits_0') if self.rng.random() < 0.99 else self.send('a_emits_1')
+        elif current_state == self.state_b:
+            # State B: 1% → 0, 99% → 1 (Extreme 1-bias)
+            return self.send('b_emits_0') if self.rng.random() < 0.01 else self.send('b_emits_1')
+        elif current_state == self.state_c:
+            # State C: 80% → 0, 20% → 1 (Strong 0-bias)
+            return self.send('c_emits_0') if self.rng.random() < 0.80 else self.send('c_emits_1')
+        elif current_state == self.state_d:
+            # State D: 20% → 0, 80% → 1 (Strong 1-bias)
+            return self.send('d_emits_0') if self.rng.random() < 0.20 else self.send('d_emits_1')
+        else:
+            # State E: 50% → 0, 50% → 1 (Balanced)
+            return self.send('e_emits_0') if self.rng.random() < 0.50 else self.send('e_emits_1')
+
+
 class SevenStateHumanMachine(StatemachineGenerator):
     """
     A UNIFILAR 7-state machine from Figure 3 - human sequence prediction study.
@@ -472,6 +566,7 @@ def create_machine(machine_type: str, seed: int = None) -> StatemachineGenerator
         'distinct_4_state': DistinctFourStateMachine, # <-- NEW 4-STATE MACHINE
         'distinct_6_state': DistinctSixStateMachine, # <-- NEW 6-STATE MACHINE
         'seven_state_human': SevenStateHumanMachine, # <-- NEW UNIFILAR 7-STATE MACHINE
+        'anti_compression': AntiCompressionMachine, # <-- ANTI-COMPRESSION MACHINE
     }
     if machine_type not in machine_map:
         raise ValueError(f"Unknown machine type: {machine_type}. Available: {', '.join(machine_map.keys())}")
@@ -481,7 +576,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate machine datasets using python-statemachine.")
     parser.add_argument(
         '--machine', required=True,
-        choices=['biased_coin', 'alternating', 'golden_mean', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human'], # <-- ADDED 7-STATE CHOICE
+        choices=['biased_coin', 'alternating', 'golden_mean', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'anti_compression'], # <-- ADDED ANTI-COMPRESSION CHOICE
         help="Type of domain-specific machine to generate from."
     )
     parser.add_argument('--length', type=int, default=100000, help="Length of sequence to generate.")

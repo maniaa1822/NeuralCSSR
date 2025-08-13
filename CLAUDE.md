@@ -25,24 +25,37 @@ Key dependencies from pyproject.toml:
 - **Visualization**: matplotlib, seaborn
 - **Graph Analysis**: networkx, python-igraph>=0.11.8
 
-## Core Architecture
+## Current Best Practice: Notebook-Driven Workflow
 
-The project consists of four main analysis pipelines:
+The project now centers around **Neural_CSSR_Experiments.ipynb** - an interactive notebook providing the complete research pipeline with comprehensive analysis and visualization.
 
-### 1. Dataset Generation (`generate_unified_dataset.py`)
-Unified framework for creating synthetic FSM datasets with multiple output formats.
+### Primary Interface: Neural_CSSR_Experiments.ipynb
 
-### 2. Domain-Specific Dataset Generation (`generate_domain_dataset.py`)
-Streamlined generator for single-machine datasets with aligned state trajectories for neural training and linear probe experiments.
+**5-Step Streamlined Pipeline:**
+1. **Generate Dataset**: `pysm_generator.py --machine <machine> --length 80000`
+2. **Create Configuration**: YAML-based configs with machine-specific parameters  
+3. **Train Model**: `train.py --config <config.yaml>` (sliding window by default)
+4. **Extract FSM**: `cssr_enhanced_extractor.py` with information-theoretic thresholds
+5. **Analyze Results**: Multi-dimensional functional equivalence testing
 
-### 3. Dataset Format Conversion (`convert_to_transcssr.py`)
-Converts NeuralCSSR datasets to transCSSR-compatible .dat format with optional burn-in trimming.
+### Machine Complexity Catalog (8 Machines)
 
-### 4. Classical CSSR Analysis (`analyze_classical_cssr.py`) 
-Comprehensive classical CSSR analysis with parameter sweep optimization and ground truth evaluation.
+| Machine | States | Complexity | Key Challenge |
+|---------|--------|------------|---------------|
+| `biased_coin` | 1 | Trivial | Single-state baseline |
+| `golden_mean` | 2 | Simple | Sharp constraint boundaries |
+| `alternating` | 2 | Simple | Deterministic patterns |
+| `distinct_3_state` | 3 | Low | Perfect recovery baseline |
+| `unifilar_3_state` | 3 | Low-Moderate | Emission overlap |
+| `distinct_4_state` | 4 | Medium | Cycle complexity |
+| `distinct_6_state` | 6 | Medium-High | Maximal emission separability |
+| `seven_state_human` | 7 | High | Emission degeneracy + literature complexity |
 
-### 5. Machine Distance Analysis (`analyze_machine_distances.py`)
-Quantitative comparison framework using 6 distance metrics between reconstructed and ground truth machines.
+### Legacy Analysis Pipelines (Still Available)
+
+- **Classical Analysis**: `analyze_classical_cssr.py` for transCSSR parameter sweeps
+- **Distance Metrics**: `analyze_machine_distances.py` for quantitative comparisons
+- **Format Conversion**: `convert_to_transcssr.py` for compatibility
 
 ## Package Structure
 
@@ -67,31 +80,41 @@ src/neural_cssr/
 - We should train with chunk size of approx 20 L
 - Remember the parameters scope and importance
 
-## Training & Evaluation
+## Quick Start: Complete Experiment in 5 Commands
 
-### Modern Modular Approach (Recommended)
+**Recommended: Use Neural_CSSR_Experiments.ipynb** for interactive analysis, or run these terminal commands:
+
 ```bash
-# Config-driven training (recommended - uses sliding window by default)
+# Step 1: Generate dataset (80k symbols, ~2 minutes)
+python pysm_generator.py --machine seven_state_human --length 80000 --output data/seven_state_human --seed 42
+
+# Step 2: Train sliding window transformer (~5-15 minutes depending on machine)  
 python train.py --config configs/sliding_window_seven_state.yaml
-python train.py --config configs/streamlined_seven_state.yaml
-python train.py --config configs/time_delay_golden_mean.yaml
 
-# CLI-based training
-python train.py --model streamlined --train domain_machines/golden_mean/golden_mean/golden_mean.dat --epochs 10 --batch_size 32 --d_model 64 --layers 2 --heads 4 --lr 1e-3 --chunk_size 25 --output_dir checkpoints/streamlined_golden_mean
+# Step 3: Extract FSM using CSSR-enhanced approach (~3-5 minutes)
+python cssr_enhanced_extractor.py \
+  --checkpoint checkpoints/sliding_window_seven_state/best.pt \
+  --data data/seven_state_human/seven_state_human.dat \
+  --output results/seven_state_human \
+  --max-sequences 1000 --max-suffix-length 8 --significance 0.01 \
+  --use-information-theoretic-threshold
 
-# Model evaluation
-python evaluate.py --checkpoint checkpoints/streamlined_golden_mean/best.pt --test domain_machines/golden_mean/golden_mean/golden_mean.dat
-python evaluate.py --checkpoint checkpoints/streamlined_golden_mean/best.pt --generate --length 1000
-python evaluate.py --checkpoint checkpoints/streamlined_golden_mean/best.pt --batch_eval domain_machines/*/*/*.dat
+# Step 4: Generate comprehensive analysis and visualizations
+python analysis_viz/generate_cssr_viz_unifilar.py \
+  --results results/seven_state_human/cssr_enhanced_results.json \
+  --output results/seven_state_human/visualizations
+
+# Step 5: Test functional equivalence (can extracted FSM reproduce original patterns?)
+python test_functional_equivalence.py --results results/seven_state_human/cssr_enhanced_results.json
 ```
 
-### Legacy Single-File Approach
+### Legacy Training Approaches (Still Functional)
 ```bash
-# Streamlined transformer (monolithic file)
-python streamlined_transformer.py --train seven_state_human_transformer.dat --epochs 10 --batch 32 --d_model 64 --layers 2 --heads 4 --lr 1e-3 --chunk-size 25 --out checkpoints/streamlined_corrected
+# Streamlined transformer (300-line monolithic file)
+python streamlined_transformer.py --train data.dat --epochs 10 --batch 32 --d_model 64
 
-# Time-delay transformer (full featured)
-python time_delay_transformer.py --train data/golden_mean/golden_mean.dat --mode ar --epochs 20 --batch 128 --d_model 64 --layers 2 --heads 4 --lr 1e-3
+# Time-delay transformer (1400-line full featured)  
+python time_delay_transformer.py --train data.dat --mode ar --epochs 20 --batch 128
 ```
 
 ## Repository Organization (July 2025)
@@ -224,25 +247,38 @@ This represents the **first successful extraction** of a multi-state FSM from a 
 
 The extracted FSM **captures the essential computational structure** of the ground truth seven-state machine, validating that neural networks do indeed learn interpretable FSM representations when trained with sliding window approach.
 
-### How to Reproduce
+### Current Usage: Notebook-First Approach
 ```bash
-# 1. Train sliding window model
-python train.py --config configs/sliding_window_seven_state.yaml
+# Primary method: Use the interactive notebook
+jupyter notebook Neural_CSSR_Experiments.ipynb
+# OR: Open in VSCode, run cells to experiment with any of the 8 machines
 
-# 2. Extract FSM using trajectory dynamics
-python extract_fsm_sliding_window.py --checkpoint checkpoints/sliding_window_seven_state/best.pt
-
-# 3. Test functional equivalence
-python test_functional_equivalence.py
-
-# 4. Compare against ground truth structure  
-python compare_extracted_fsm.py
+# Alternative: Direct command-line usage  
+python pysm_generator.py --machine <machine> --length 80000 --output data/<machine>
+python train.py --config configs/sliding_window_<machine>.yaml  
+python cssr_enhanced_extractor.py --checkpoint checkpoints/.../best.pt --use-information-theoretic-threshold
 ```
 
-## CSSR-Enhanced Neural Extraction Breakthrough (August 2025)
+## Current Research Status: Notebook-Driven Experimental Platform
 
-### Theoretical Innovation: Hybrid CSSR-Neural Architecture
-Developed a novel **CSSR-Enhanced Extractor** that successfully bridges classical computational mechanics with modern neural methods, representing the first principled fusion of CSSR theory with neural representations.
+### Interactive Research Interface (Neural_CSSR_Experiments.ipynb)
+The project has evolved into a comprehensive **interactive research platform** centered around the main notebook, providing:
+
+#### Complete Experimental Workflow
+- **Machine Selection**: 8 finite state machines with full complexity analysis
+- **Automatic Configuration**: Machine-specific parameters (d_model, epochs, extraction settings)
+- **One-Click Execution**: Each step runs with a single command or cell execution
+- **Real-Time Analysis**: Immediate visualization and assessment of results
+- **Comprehensive Testing**: Multi-dimensional functional equivalence validation
+
+#### Research Insights Integration
+- **Complexity Catalog**: Detailed analysis of why each machine presents unique challenges
+- **Parameter Optimization**: Information-theoretic threshold computation as default
+- **Classical Comparison**: Side-by-side transCSSR vs Neural-CSSR results
+- **Quality Assessment**: Advanced statistical testing (n-grams, run lengths, spectral analysis)
+
+### CSSR-Enhanced Neural Extraction: Production-Ready
+The **CSSR-Enhanced Extractor** represents the culmination of the neural-classical fusion research:
 
 #### Architecture Design
 ```python
@@ -616,16 +652,25 @@ echo "Pure transCSSR: 156 states (over-segmentation)"
 echo "Hybrid CSSR+neural: 16 states (balanced complexity)"
 ```
 
-## Memories
+## Project Evolution & Current Status
 
-- Successfully validated transformer learning on seven state human dataset (98.4% → 98.5% accuracy)
-- Created streamlined transformer reducing file size by 79% while maintaining performance  
-- Fixed chunking logic and architecture issues (TransformerDecoderLayer vs EncoderLayer)
-- Cleaned repository structure moving 99% of files to archive while preserving all functionality
-- Generated clean domain-specific machine datasets with corrected Period4 implementation
-- **Implemented sliding window as default method, solving long sequence generation quality issues**
-- **Achieved 98.4% accuracy with 34k parameters using sliding window approach**
-- **🎉 BREAKTHROUGH: Successfully extracted multi-state FSMs from neural transformers using CSSR-enhanced approach**
-- **Perfect 3-state recovery (100% accuracy) and excellent 7-state recovery (85.9% emission accuracy)**
-- **First successful Neural Computational Mechanics implementation bridging classical theory with neural methods**
-- **Validated across complexity spectrum: robust parameter sensitivity and natural structure discovery**
+### Recent Developments (August 2025)
+- **Notebook-Driven Interface**: Complete transition to Neural_CSSR_Experiments.ipynb as primary research interface
+- **8-Machine Complexity Catalog**: Comprehensive analysis from trivial (biased_coin) to complex (seven_state_human)
+- **Information-Theoretic Thresholds**: Now default approach for optimal neural-classical fusion
+- **Comprehensive Analysis Suite**: Multi-dimensional functional equivalence testing (n-grams, run lengths, spectral analysis)
+- **Production-Ready Pipeline**: Streamlined 5-step workflow with automatic parameter optimization
+
+### Research Achievements
+- **Neural-Classical Fusion**: First successful CSSR-enhanced extractor bridging computational mechanics with neural methods
+- **Sliding Window Training**: 25x more training data, solving generation quality issues
+- **Perfect Recovery Validation**: 100% accuracy on 3-state baseline, 85.9% emission accuracy on complex 7-state machines
+- **Scalable Framework**: Validated across complexity spectrum from 1-state to 7-state machines
+- **Functional Equivalence**: Extracted FSMs successfully reproduce statistical properties of ground truth machines
+
+### Current Best Practices
+- **Primary Interface**: Neural_CSSR_Experiments.ipynb for all experiments
+- **Default Training**: Sliding window transformers with YAML configuration
+- **Default Extraction**: CSSR-enhanced approach with information-theoretic thresholds
+- **Quality Validation**: Comprehensive functional equivalence testing suite
+- **Machine Selection**: Use complexity catalog to choose appropriate test machines
