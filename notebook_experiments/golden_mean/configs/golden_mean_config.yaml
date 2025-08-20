@@ -1,0 +1,22 @@
+data:
+  chunk_size: 25
+  sliding_window: true
+  test_split: 0.2
+  train_path: notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat
+experiment:
+  name: golden_mean_notebook_experiment
+  output_dir: notebook_experiments/golden_mean/checkpoints
+model:
+  d_model: 16
+  dropout: 0.1
+  n_heads: 2
+  n_layers: 2
+  type: sliding_window
+  vocab_size: 3
+  window_size: 25
+training:
+  batch_size: 32
+  epochs: 3
+  gradient_clipping: 1.0
+  learning_rate: 0.001
+  weight_decay: 0.01

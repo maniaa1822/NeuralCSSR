@@ -1,0 +1,22 @@
+{
+  "sequence_length": 50000,
+  "num_states": 2,
+  "alphabet_size": 2,
+  "machine_type": "even_process",
+  "generation_seed": 42,
+  "state_mapping": {
+    "name_to_index": {
+      "state_e": 0,
+      "state_o": 1
+    },
+    "index_to_name": {
+      "0": "state_e",
+      "1": "state_o"
+    }
+  },
+  "files": {
+    "sequence": "even_process.dat",
+    "states": "even_process.states",
+    "machine": "even_process.machine.json"
+  }
+}

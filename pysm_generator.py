@@ -81,6 +81,39 @@ class GoldenMeanMachine(StatemachineGenerator):
         if self.current_state == self.state_a: return self.send('emit_0_from_a') if self.rng.random() < 0.5 else self.send('emit_1_from_a')
         else: return self.send('emit_1_from_b')
 
+class EvenProcessMachine(StatemachineGenerator):
+    """
+    Even Process (sofic, infinite Markov order, 2 causal states):
+    - Runs of 1s have even length; 0s can appear only when the current run of 1s has even parity.
+    - Minimal ε-machine has two states: E (even parity), O (odd parity).
+    - Transitions (unifilar): E --0--> E, E --1--> O; O --1--> E; (0 from O is forbidden)
+    Generation policy:
+    - In E: emit 1 with probability p1 (default 0.5), otherwise 0
+    - In O: always emit 1
+    """
+    state_e, state_o = State('E', initial=True), State('O')
+    e_emit_0, e_emit_1 = state_e.to(state_e, on="on_emit_0"), state_e.to(state_o, on="on_emit_1")
+    o_emit_1 = state_o.to(state_e, on="on_emit_1")
+
+    def __init__(self, seed: int = None, p1_in_E: float = 0.5):
+        super().__init__(seed)
+        self.alphabet = ['0', '1']
+        self.p1_in_E = float(p1_in_E)
+        self._transition_info = {
+            "E|0": [{"to_state": "E", "probability": 1.0}],
+            "E|1": [{"to_state": "O", "probability": 1.0}],
+            "O|1": [{"to_state": "E", "probability": 1.0}],
+        }
+
+    def on_emit_0(self) -> str: return '0'
+    def on_emit_1(self) -> str: return '1'
+
+    def step(self) -> str:
+        if self.current_state == self.state_e:
+            return self.send('e_emit_1') if self.rng.random() < self.p1_in_E else self.send('e_emit_0')
+        else:
+            return self.send('o_emit_1')
+
 class Unifilar3StateMachine(StatemachineGenerator):
     """
     A corrected, unifilar 3-state machine with distinct probabilistic signatures.
@@ -561,6 +594,7 @@ def create_machine(machine_type: str, seed: int = None) -> StatemachineGenerator
         'biased_coin': BiasedCoinMachine,
         'alternating': AlternatingMachine,
         'golden_mean': GoldenMeanMachine,
+        'even_process': EvenProcessMachine,
         'unifilar_3_state': Unifilar3StateMachine, # <-- ORIGINAL 3-STATE MACHINE
         'distinct_3_state': DistinctThreeStateMachine, # <-- NEW DISTINCT 3-STATE MACHINE
         'distinct_4_state': DistinctFourStateMachine, # <-- NEW 4-STATE MACHINE
@@ -576,7 +610,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate machine datasets using python-statemachine.")
     parser.add_argument(
         '--machine', required=True,
-        choices=['biased_coin', 'alternating', 'golden_mean', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'anti_compression'], # <-- ADDED ANTI-COMPRESSION CHOICE
+        choices=['biased_coin', 'alternating', 'golden_mean', 'even_process', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'anti_compression'], # <-- ADDED EVEN PROCESS
         help="Type of domain-specific machine to generate from."
     )
     parser.add_argument('--length', type=int, default=100000, help="Length of sequence to generate.")

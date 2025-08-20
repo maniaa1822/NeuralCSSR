@@ -65,8 +65,9 @@ class ClassicalCSSR:
         
         if self.use_neural_probabilities:
             print("🧠 CSSR running in NEURAL mode with transformer probabilities")
-            # Set alphabet from neural provider
-            self.alphabet = set(neural_probability_provider.id_to_token.values())
+            # Set alphabet from neural provider if available
+            if hasattr(neural_probability_provider, 'id_to_token'):
+                self.alphabet = set(neural_probability_provider.id_to_token.values())
         else:
             print("📊 CSSR running in EMPIRICAL mode with dataset counts")
         

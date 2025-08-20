@@ -1210,6 +1210,7 @@ dependencies = [
     { name = "numpy", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "python-igraph", version = "0.11.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "python-igraph", version = "0.11.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "python-statemachine" },
     { name = "pyyaml" },
     { name = "scikit-learn", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "scikit-learn", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
@@ -1230,6 +1231,7 @@ requires-dist = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "python-igraph", specifier = ">=0.11.8" },
+    { name = "python-statemachine", specifier = ">=2.5.0" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
     { name = "scipy" },
@@ -2193,6 +2195,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/54/b6/c03609dd766c5c5ca17e3b42b42a92fbb2ab133256265128cfeb9b1f1733/python_igraph-0.11.9.tar.gz", hash = "sha256:51ad8bfba7777ff110cd4f47eb9efeaf092e4edf3167153b05156dbe55dbf90c", size = 9756 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/86/64/0d58006ac4f03dc0b8055bbf6b4cdee361646dc7a8db9b233145e3b981d9/python_igraph-0.11.9-py3-none-any.whl", hash = "sha256:9154606132dac48071edf5bc27f5b54cb316db09686ad8cffce078943733de29", size = 9172 },
+]
+
+[[package]]
+name = "python-statemachine"
+version = "2.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/45/91/4f05f3931d1e9b1df71b17dc08c43feddf2bed7dbf13f95323df2cc8e340/python_statemachine-2.5.0.tar.gz", hash = "sha256:ae88cd22e47930b92b983a2176e61d811e571b69897be2568ec812c2885fb93a", size = 403718 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/2d/1c95ebe84df60d630f8e855d1df2c66368805444ac167e9b50f29eabe917/python_statemachine-2.5.0-py3-none-any.whl", hash = "sha256:0ed53846802c17037fcb2a92323f4bc0c833290fa9d17a3587c50886c1541e62", size = 50415 },
 ]
 
 [[package]]

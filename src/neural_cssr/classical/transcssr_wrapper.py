@@ -11,18 +11,20 @@ from typing import Dict, List, Any, Optional, Tuple
 import time
 import numpy as np
 from collections import defaultdict
+import math
 
 # Add transCSSR to path
 transcssr_path = Path(__file__).parent.parent.parent.parent / 'transCSSR'
 sys.path.insert(0, str(transcssr_path))
 
-from transCSSR import *
+from transCSSR import estimate_predictive_distributions, run_transCSSR
+import itertools
 
 
 class TransCSSRWrapper:
     """Wrapper for transCSSR reference implementation."""
     
-    def __init__(self, significance_level: float = 0.001):
+    def __init__(self, significance_level: float = 0.001, test_type: str = 'chi2'):
         """
         Initialize transCSSR wrapper.
         
@@ -30,6 +32,7 @@ class TransCSSRWrapper:
             significance_level: Statistical significance level for chi-square tests
         """
         self.significance_level = significance_level
+        self.test_type = test_type  # 'chi2' or 'G'
         self.axs = ['0']  # Input alphabet (usually just '0' for single input)
         self.ays = ['0', '1']  # Output alphabet (binary)
         
@@ -62,7 +65,8 @@ class TransCSSRWrapper:
             word_lookup_marg, word_lookup_fut, max_length, 
             self.axs, self.ays, self.e_symbols, 
             '', '',  # Xt_name, Yt_name
-            alpha=self.significance_level
+            alpha=self.significance_level,
+            test_type=self.test_type
         )
         
         runtime = time.time() - start_time
@@ -98,6 +102,118 @@ class TransCSSRWrapper:
             }
         }
         
+        return results
+
+    def run_cssr_neural(self, provider, string_x: str, string_y: str,
+                        max_length: int = 9, pseudo_count_scale: int = 100,
+                        prob_clip: float = 1e-3, temperature: float = 1.0,
+                        mix_empirical: float = 0.0) -> Dict[str, Any]:
+        """
+        Run transCSSR using neural probabilities instead of empirical counts.
+        
+        Builds word lookups (marginal and future) by reusing observed marginal
+        counts from the data and distributing them across future symbols using
+        neural probabilities. This preserves sample sizes and avoids fabricating
+        unobserved histories.
+        
+        Args:
+            provider: Object exposing predict_next_distribution(history: str) -> {symbol: prob}
+            string_x, string_y: Input/output sequences (Y is the observed process)
+            max_length: L_max
+            pseudo_count_scale: total pseudo-count mass per (xpast, ypast)
+        """
+        from collections import Counter
+
+        axs = self.axs
+        ays = self.ays
+
+        # Reuse observed marginals and futures from data
+        observed_marg, observed_fut = estimate_predictive_distributions(string_x, string_y, max_length)
+        word_lookup_marg = Counter(observed_marg)
+        word_lookup_fut = Counter()
+
+        # For each observed (xpast+ax, ypast), distribute its count by neural probs
+        for (xpax, ypast), c_x in word_lookup_marg.items():
+            # Predict distribution over next Y given ypast
+            probs = provider.predict_next_distribution(ypast)
+            # Clip and renormalize to avoid zeros and extreme confidence
+            p0 = max(prob_clip, min(1.0 - prob_clip, probs['0']))
+            p1 = max(prob_clip, min(1.0 - prob_clip, probs['1']))
+            s = p0 + p1
+            p0, p1 = p0 / s, p1 / s
+            # Temperature smoothing on probabilities (power transform)
+            if temperature and temperature != 1.0:
+                gamma = 1.0 / float(temperature)
+                p0_t = p0 ** gamma
+                p1_t = p1 ** gamma
+                st = p0_t + p1_t
+                p0, p1 = p0_t / st, p1_t / st
+            # Optional mixing with empirical counts for this (xpast, ypast)
+            if mix_empirical and mix_empirical > 0.0:
+                c0_emp = observed_fut.get((xpax, ypast + '0'), 0)
+                c1_emp = observed_fut.get((xpax, ypast + '1'), 0)
+                if c_x > 0:
+                    pe0 = c0_emp / float(c_x)
+                    pe1 = c1_emp / float(c_x)
+                else:
+                    pe0 = pe1 = 0.5
+                # Mix and renormalize
+                lam = float(mix_empirical)
+                p0 = (1 - lam) * p0 + lam * pe0
+                p1 = (1 - lam) * p1 + lam * pe1
+                st2 = p0 + p1
+                if st2 > 0:
+                    p0, p1 = p0 / st2, p1 / st2
+            # Initial rounding
+            raw_counts = {'0': p0 * c_x, '1': p1 * c_x}
+            rounded = {ay: int(math.floor(v)) for ay, v in raw_counts.items()}
+            # Fix rounding to preserve total
+            delta = int(c_x - sum(rounded.values()))
+            if delta > 0:
+                # Assign remainder to largest fractional parts
+                fracs = sorted([(raw_counts[ay] - rounded[ay], ay) for ay in ays], reverse=True)
+                for i in range(delta):
+                    rounded[fracs[i % len(ays)][1]] += 1
+            elif delta < 0:
+                # Remove from smallest fractional parts
+                fracs = sorted([(raw_counts[ay] - rounded[ay], ay) for ay in ays])
+                for i in range(-delta):
+                    rounded[fracs[i % len(ays)][1]] = max(0, rounded[fracs[i % len(ays)][1]] - 1)
+            for ay in ays:
+                if rounded[ay] < 0:
+                    rounded[ay] = 0
+                word_lookup_fut[(xpax, ypast + ay)] += rounded[ay]
+
+        # Run reference algorithm with neural-derived counts
+        epsilon, invepsilon, morph_by_state = run_transCSSR(
+            word_lookup_marg, word_lookup_fut, max_length,
+            axs, ays, self.e_symbols, '', '', alpha=self.significance_level, test_type=self.test_type
+        )
+
+        # Package results as in run_cssr
+        num_states = len(invepsilon)
+        results = {
+            'discovered_structure': {
+                'num_states': num_states,
+                'states': self._format_states(invepsilon, morph_by_state),
+                'epsilon_mapping': self._format_epsilon_mapping(epsilon),
+                'transitions': self._extract_transitions(epsilon, invepsilon, morph_by_state)
+            },
+            'execution_info': {
+                'converged': True,
+                'algorithm': 'transCSSR-neural',
+                'parameters': {
+                    'max_length': max_length,
+                    'significance_level': self.significance_level,
+                    'pseudo_count_scale': pseudo_count_scale,
+                    'test_type': self.test_type,
+                    'prob_clip': prob_clip,
+                    'temperature': temperature,
+                    'mix_empirical': mix_empirical
+                }
+            }
+        }
+
         return results
     
     def run_parameter_sweep(self, string_x: str, string_y: str, 
