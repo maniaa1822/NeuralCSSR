@@ -565,6 +565,12 @@ def save_dataset(sequence: str, state_indices: List[int], machine: StatemachineG
     dat_file.write_text(sequence)
     states_file = output_path.with_suffix('.states')
     states_file.write_text(' '.join(map(str, state_indices)))
+    # Also export states as a compact character sequence for .dat-style consumption
+    # Map state indices to uppercase letters A, B, C, ... (supports up to 26 states)
+    index_to_char = {idx: chr(ord('A') + idx) for idx in range(len(set(state_indices)))}
+    states_chars = ''.join(index_to_char[idx] for idx in state_indices)
+    states_dat_file = output_path.with_suffix('.states.dat')
+    states_dat_file.write_text(states_chars)
     machine_file = output_path.with_suffix('.machine.json')
     machine_data = {
         'alphabet': machine.alphabet,
@@ -579,12 +585,19 @@ def save_dataset(sequence: str, state_indices: List[int], machine: StatemachineG
         'sequence_length': len(sequence), 'num_states': len(machine.states),
         'alphabet_size': len(machine.alphabet), 'machine_type': metadata.get('machine_type', 'unknown'),
         'generation_seed': metadata.get('seed'), 'state_mapping': {'name_to_index': state_to_index, 'index_to_name': index_to_state},
-        'files': {'sequence': str(dat_file.name), 'states': str(states_file.name), 'machine': str(machine_file.name)}
+        'state_index_to_char': index_to_char,
+        'files': {
+            'sequence': str(dat_file.name),
+            'states': str(states_file.name),
+            'states_dat': str(states_dat_file.name),
+            'machine': str(machine_file.name)
+        }
     }
     metadata_file.write_text(json.dumps(full_metadata, indent=2))
     print("Dataset saved:")
     print(f"  Sequence: {dat_file} ({len(sequence)} symbols)")
     print(f"  States:   {states_file} ({len(state_indices)} state indices)")
+    print(f"  States(.dat): {states_dat_file} ({len(state_indices)} symbols)")
     print(f"  Machine:  {machine_file}")
     print(f"  Metadata: {metadata_file}")
     print(f"  State mapping: {state_to_index}")

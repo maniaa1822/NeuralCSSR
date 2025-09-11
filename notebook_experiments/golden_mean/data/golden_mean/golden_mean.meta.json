@@ -14,9 +14,14 @@
       "1": "state_b"
     }
   },
+  "state_index_to_char": {
+    "0": "A",
+    "1": "B"
+  },
   "files": {
     "sequence": "golden_mean.dat",
     "states": "golden_mean.states",
+    "states_dat": "golden_mean.states.dat",
     "machine": "golden_mean.machine.json"
   }
 }

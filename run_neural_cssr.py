@@ -20,9 +20,8 @@ import random
 import torch
 import torch.nn.functional as F
 
-from src.neural_cssr.neural import NeuralCSSRProbabilityProvider
-from src.neural_cssr.classical.cssr import ClassicalCSSR
-from src.neural_cssr.classical.transcssr_wrapper import TransCSSRWrapper
+# Simplified imports - using minimal utils instead of complex src/ infrastructure
+from neural_cssr_utils import NeuralCSSRProbabilityProvider, ClassicalCSSR, TransCSSRWrapper
 
 # Optional: nanoGPT integration
 try:
@@ -260,7 +259,7 @@ def main():
     # JS/JS-H settings
     p.add_argument('--state_metric', type=str, choices=['js','jsh'], default='js')
     p.add_argument('--js_threshold', type=float, default=0.02)
-    p.add_argument('--horizon', type=int, default=3)
+    p.add_argument('--horizon', type=int, default=1)
     p.add_argument('--prob_clip', type=float, default=1e-3)
     p.add_argument('--temperature', type=float, default=1.0)
     p.add_argument('--min_count', type=int, default=5)

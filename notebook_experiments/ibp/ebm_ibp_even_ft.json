@@ -1,0 +1,72 @@
+{
+  "preset": "even_process",
+  "ckpt": "/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt",
+  "data": "/home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat",
+  "val_data": null,
+  "num_states": 2,
+  "val_examples": 2000,
+  "train_examples": 100,
+  "num_probe_datasets": 10,
+  "tune_scope": "head",
+  "ft_steps": 150,
+  "ft_lr": 0.001,
+  "ft_batch_size": 64,
+  "surjective_only": true,
+  "balance_by_label": true,
+  "rib_mean": 0.9725046246474365,
+  "rib_std": 0.007818117594678752,
+  "dib_mean": 0.9609953854153126,
+  "dib_std": 0.0026121107301722494,
+  "per_task": [
+    {
+      "degenerate": false,
+      "rib": 0.9802327094455346,
+      "dib": 0.964267144528421
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9754779388491486,
+      "dib": 0.9615281053276634
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9669715768816864,
+      "dib": 0.9615397114259716
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9699626511362917,
+      "dib": 0.9620712707284915
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9783714207338946,
+      "dib": 0.9644667694193236
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9583043193855373,
+      "dib": 0.9551540361367477
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9822689610544899,
+      "dib": 0.9615791721602198
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9731111040774268,
+      "dib": 0.9601585857272845
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9611468070590056,
+      "dib": 0.9580694880317915
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9791987578513501,
+      "dib": 0.9611195706672114
+    }
+  ]
+}

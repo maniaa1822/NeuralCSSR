@@ -1,0 +1,72 @@
+# EBM Inductive Bias Probe (IBP)
+
+Purpose: Run and interpret inductive-bias probes on the Energy-Based Binary LM (EBM) for Golden Mean and Even Process, while preserving next-token behavior.
+
+## Paths
+- Script: `notebook_experiments/ibp/ebm_ibp.py`
+- Checkpoints:
+  - GM: `notebook_experiments/golden_mean/ebm_ckpt.pt`
+  - Even: `notebook_experiments/even_process/ebm_ckpt.pt`
+- Data:
+  - GM: `notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat`
+  - Even: `notebook_experiments/even_process/even_process.dat`
+
+## Key Flags (recommended defaults)
+- `--use_probe_head`: Train a separate linear probe on last hidden states; preserves next-token head (recommended).
+- `--train_examples 100`: Small balanced set per task.
+- `--val_examples 2000`: Fixed validation subset across tasks.
+- `--num_probe_datasets 20..50`: Number of random tasks.
+- `--ft_steps 50` `--ft_lr 1e-3`: Light training for the probe.
+- `--log_next_token_metrics`: Print/record next-token accuracy pre/post (retention check).
+- Optional: `--val_data` to validate on a different sequence.
+
+## Caution
+- Avoid `--tune_scope head/full` for IBP unless testing adaptation; it overwrites the LM head and can degrade next-token prediction. Prefer `--use_probe_head`.
+
+## Commands
+Activate env before running:
+```bash
+source /home/matteo/NeuralCSSR/.venv/bin/activate
+```
+
+Even Process (probe head, 20 tasks):
+```bash
+uv run python notebook_experiments/ibp/ebm_ibp.py   --ckpt notebook_experiments/even_process/ebm_ckpt.pt   --preset even_process --train_examples 100 --val_examples 2000   --num_probe_datasets 20 --use_probe_head --ft_steps 50 --ft_lr 1e-3   --eval_batch_size 512 --log_next_token_metrics   --output notebook_experiments/ibp/ebm_ibp_even_probe_nt.json
+```
+
+Golden Mean (probe head, 20 tasks):
+```bash
+uv run python notebook_experiments/ibp/ebm_ibp.py   --ckpt notebook_experiments/golden_mean/ebm_ckpt.pt   --preset golden_mean --train_examples 100 --val_examples 2000   --num_probe_datasets 20 --use_probe_head --ft_steps 50 --ft_lr 1e-3   --eval_batch_size 512 --log_next_token_metrics   --output notebook_experiments/ibp/ebm_ibp_gm_probe_nt.json
+```
+
+## Recent Results (indicative)
+- GM (head-finetune, 10 tasks): R-IB≈0.998, D-IB≈0.998 (capacity; not retention-safe).
+- Even (head-finetune, 10 tasks): R-IB≈0.973, D-IB≈0.961; next-token degraded.
+- Even (probe head, 1 task): R-IB≈0.981, D-IB≈0.963; next-token retained (pre≈post).
+- Even (probe head, custom tasks, 5 tasks):
+  - even_state->1: R-IB≈0.980, D-IB≈0.963
+  - even_state->0: R-IB≈0.987, D-IB≈0.963
+  - p1_gt_0.5: R-IB≈0.921, D-IB≈0.931
+  - length_even (non-causal): R-IB≈1.000, D-IB≈0.000
+  - last3_sum_odd: R-IB≈0.730, D-IB≈0.794
+  - All with nt_pre≈nt_post (retained) using probe head.
+
+### Head fine-tuning (custom tasks) observations
+- Setup: `--tune_scope head` (no probe head), tasks: even_state->1, even_state->0, p1_gt_0.5, length_even, last3_sum_odd.
+- Aggregate: R-IB≈0.75 (±0.19), D-IB≈0.74 (±0.19), showing wide variance across tasks.
+- Per-task highlights:
+  - even_state->1: R-IB≈0.979, D-IB≈0.964; next-token accuracy dropped to ~0.35; argmax0|O≈0.97 (severe shift).
+  - even_state->0: R-IB≈0.985, D-IB≈0.958; next-token retained (~0.65 acc).
+  - p1_gt_0.5: R-IB≈0.60, D-IB≈0.61; next-token retained.
+  - length_even: R-IB≈0.54, D-IB≈0.50; next-token slightly degraded (~0.60 acc).
+  - last3_sum_odd: R-IB≈0.64, D-IB≈0.68; next-token slightly degraded (~0.62 acc).
+- Takeaway: head-finetune can significantly degrade next-token behavior for some tasks (especially parity mapping that conflicts with LM head), so prefer probe head or retention-aware fine-tuning.
+
+## Metrics
+- R-IB: fraction of same-state pairs with identical predictions (higher is better).
+- D-IB: 1 − fraction of different-state pairs with identical predictions (higher is better).
+- Next-token retention: with `--use_probe_head`, accuracy pre/post should match.
+
+## Next Steps
+- If fine-tuning instead of probe head: freeze `energy_head`, tune only last encoder layer (or LoRA), add retention loss (λ·NT CE or KL to base logits), early stop with nt_post threshold.
+- Add `--retain_next_token`, `--retain_lambda`, `--freeze_energy_head`, `--tune_encoder_layers` if moving to retention-aware fine-tuning.

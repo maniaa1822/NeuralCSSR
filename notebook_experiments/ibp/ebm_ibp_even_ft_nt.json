@@ -1,0 +1,85 @@
+{
+  "preset": "even_process",
+  "ckpt": "/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt",
+  "data": "/home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat",
+  "val_data": null,
+  "num_states": 2,
+  "val_examples": 2000,
+  "train_examples": 100,
+  "num_probe_datasets": 3,
+  "tune_scope": "head",
+  "ft_steps": 50,
+  "ft_lr": 0.001,
+  "ft_batch_size": 64,
+  "surjective_only": true,
+  "balance_by_label": true,
+  "rib_mean": 0.9784780982793263,
+  "rib_std": 0.0029716706091810897,
+  "dib_mean": 0.9628287620780797,
+  "dib_std": 0.0014502952871422255,
+  "per_task": [
+    {
+      "degenerate": false,
+      "rib": 0.9802327094455346,
+      "dib": 0.964267144528421,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.3495,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.9697452229299363
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.980907943139696,
+      "dib": 0.9633757961783439,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.03184713375796178
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9742936422527484,
+      "dib": 0.960843345527474,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.349,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.9697452229299363
+      }
+    }
+  ]
+}

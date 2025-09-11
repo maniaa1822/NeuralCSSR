@@ -1,0 +1,132 @@
+{
+  "preset": "even_process",
+  "ckpt": "/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt",
+  "data": "/home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat",
+  "val_data": null,
+  "num_states": 2,
+  "val_examples": 2000,
+  "train_examples": 100,
+  "num_probe_datasets": 0,
+  "tune_scope": "head",
+  "ft_steps": 50,
+  "ft_lr": 0.001,
+  "ft_batch_size": 64,
+  "surjective_only": true,
+  "balance_by_label": true,
+  "rib_mean": 0.7497381711014046,
+  "rib_std": 0.19255513438886024,
+  "dib_mean": 0.7429212085198047,
+  "dib_std": 0.18700703194279206,
+  "per_task": [
+    {
+      "degenerate": false,
+      "rib": 0.9790413791648204,
+      "dib": 0.9635823847282317,
+      "task": "even_state->1",
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.35,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.9697452229299363
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9850331989899629,
+      "dib": 0.9579302148520918,
+      "task": "even_state->0",
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.6465,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.041401273885350316
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.6024719883522188,
+      "dib": 0.6097356595049302,
+      "task": "p1_gt_0.5",
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.648,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.014331210191082803
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.5390791500495875,
+      "dib": 0.5009841971365434,
+      "task": "length_even",
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.604,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.1624203821656051
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.6430651389504336,
+      "dib": 0.682373586377226,
+      "task": "last3_sum_odd",
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.6485,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.004777070063694267
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.617,
+        "mean_p0_E": NaN,
+        "mean_p0_O": NaN,
+        "frac_O": 0.314,
+        "argmax0_O": 0.11146496815286625
+      }
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "preset": "golden_mean",
+  "ckpt": "/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_ckpt.pt",
+  "data": "/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat",
+  "val_data": null,
+  "num_states": 2,
+  "val_examples": 2000,
+  "train_examples": 100,
+  "num_probe_datasets": 10,
+  "tune_scope": "head",
+  "ft_steps": 150,
+  "ft_lr": 0.001,
+  "ft_batch_size": 64,
+  "surjective_only": true,
+  "balance_by_label": true,
+  "rib_mean": 0.9979689282469589,
+  "rib_std": 0.0005682118925789583,
+  "dib_mean": 0.9980418171627494,
+  "dib_std": 0.000723133259048646,
+  "per_task": [
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706
+    }
+  ]
+}

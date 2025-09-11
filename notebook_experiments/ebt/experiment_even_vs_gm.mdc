@@ -1,0 +1,79 @@
+title: EBM experiments — Golden Mean vs Even Process (2025-09-10)
+tags: ebm, golden_mean, even_process, parity, evaluation, gpu, amp
+
+## Overview
+We trained a minimal Energy-Based Binary LM (EBM) on Golden Mean and Even Process datasets, added validation metrics (including parity-aware metrics for the Even Process), and cross-evaluated the Even-Process checkpoint on Golden Mean. This file records commands and key results for reproducibility.
+
+## Code
+- Model and training: `notebook_experiments/ebt/models.py`, `notebook_experiments/ebt/train_golden_mean.py`
+- Parity/dataset check: `notebook_experiments/ebt/check_even_dataset.py`
+- Cross-eval/generation: `notebook_experiments/ebt/eval_ebm.py`
+
+## Environment
+- Torch + AMP enabled via flags
+- Hardware: CUDA if available; otherwise CPU
+
+## Golden Mean (subset 10k) — Training
+Command:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/train_golden_mean.py \
+  --preset golden_mean --device cuda --amp --tf32 \
+  --max_tokens 10000 \
+  --context_window 64 --epochs 3 --steps_per_epoch 500 --batch_size 64 \
+  --d_model 128 --layers 4 --heads 8 --dropout 0.1 --lr 3e-4
+```
+Result (final epoch):
+- val_loss ≈ 0.4549 nats (0.6563 bits), ppl ≈ 1.576
+- p(0|0) ≈ 0.004, p(0|1) ≈ 0.553
+- CSV: `/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_metrics.csv`
+- CKPT: `/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_ckpt.pt`
+
+Interpretation: Near-theoretical GM behavior (H≈2/3 bits, forbid 00 strongly, allow 0 after 1 at ≈0.5).
+
+## Even Process (subset 10k) — Training
+Command:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/train_golden_mean.py \
+  --preset even_process --device cuda --amp --tf32 \
+  --max_tokens 10000 \
+  --context_window 128 --epochs 3 --steps_per_epoch 500 --batch_size 64 \
+  --d_model 128 --layers 4 --heads 8 --dropout 0.0 --lr 3e-4
+```
+Representative results (final epoch):
+- val_loss ≈ 0.5008 nats (0.7225 bits), ppl ≈ 1.650
+- parity metrics: p0|E ≈ 0.453, p0|O ≈ 0.023, frac_O ≈ 0.343, argmax0|O ≈ 0.003
+- CSV: `/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_metrics.csv`
+- CKPT: `/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt`
+
+Interpretation: Parity learned well (near-zero 0 in O). Slight underestimation of p0 in E (target 0.5).
+
+## Even Process dataset sanity check
+Command:
+```bash
+uv run python /home/matteo/NeuralCSSR/notebook_experiments/ebt/check_even_dataset.py \
+  --data /home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat
+```
+Output (p≈0.5):
+- p(1|E) ≈ 0.498, p(0|O) ≈ 0.0
+- frac_O ≈ 0.332 (theory p/(1+p)), zero_rate ≈ 0.335 ((1−p)/(1+p))
+- Entropy rate (theory) ≈ 0.668 bits/sym (H2(p)/(1+p))
+
+## Cross-eval: Even-Process ckpt on Golden Mean
+Command:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/eval_ebm.py \
+  --ckpt /home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt \
+  --data /home/matteo/NeuralCSSR/notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat \
+  --device auto --context_window 128 --gen_prefix_len 64 --gen_steps 256 --temperature 1.0
+```
+Output:
+- loss ≈ 2.371 nats (3.421 bits), ppl ≈ 10.71
+- cond. probs (GM expectation: p0_after0≈0, p0_after1≈0.5): p0_after0≈0.522, p0_after1≈0.168
+- Golden Mean violation rate (generated) ≈ 0.484 (should ≈ 0)
+
+Interpretation: Expected OOD behavior. Even-Process model does not satisfy GM constraint (no 00) when evaluated/generating on GM.
+
+## Notes / Next
+- To close Even-Process gap: more steps, larger context (128–256), dropout 0.0, weight_decay 0.0, or small parity-regularizer.
+- Optional: fine-tune Even-Process ckpt on GM with low LR to transfer.
+

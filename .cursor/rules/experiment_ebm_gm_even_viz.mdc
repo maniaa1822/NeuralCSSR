@@ -1,0 +1,125 @@
+title: EBM — Golden Mean & Even Process: Training, Eval, and Visualization (2025-09-11)
+tags: ebm, golden_mean, even_process, visualization, cka, redundancy, metrics
+
+## Overview
+This log captures commands and results for training our Energy-Based Binary LM (EBM) on Golden Mean and Even Process, evaluating next-token metrics, generating representation visualizations, computing redundancy and CKA, and comparing briefly to the nanoGPT experiments in `docs/experiments_golden_mean.md`.
+
+## Code & Data
+- Model: `notebook_experiments/ebt/models.py`
+- Train/Eval: `notebook_experiments/ebt/train_golden_mean.py`, `notebook_experiments/ebt/eval_ebm.py`, `notebook_experiments/ebt/check_even_dataset.py`
+- Visualization: `notebook_experiments/ebt/viz_generate_ebm.py`, `notebook_experiments/ebt/viz_metrics_ebm.py`
+- Viz utilities (reused): `nanoGPT/rep_viz.py`
+- Datasets:
+  - GM: `/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat`
+  - Even: `/home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat`
+
+## Environment
+- Use `uv run --with torch` for GPU-aware runs; `--amp` and `--tf32` optional on Ampere+.
+
+## Golden Mean — Train (subset ~10k)
+Command:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/train_golden_mean.py \
+  --preset golden_mean --device auto --amp --tf32 \
+  --max_tokens 10000 \
+  --context_window 64 --epochs 3 --steps_per_epoch 500 --batch_size 64 \
+  --d_model 128 --layers 4 --heads 8 --dropout 0.1 --lr 3e-4
+```
+Artifacts:
+- CKPT: `/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_ckpt.pt`
+- CSV: `/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_metrics.csv`
+
+Observed (from CSV, final epoch):
+- val_loss ≈ 0.4549 nats (0.6563 bits), ppl ≈ 1.5760
+- p(0|0) ≈ 0.0037, p(0|1) ≈ 0.5531, zero_violation ≈ 0.0
+
+## Even Process — Train (subset ~10k)
+Command:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/train_golden_mean.py \
+  --preset even_process --device auto --amp --tf32 \
+  --max_tokens 10000 \
+  --context_window 128 --epochs 3 --steps_per_epoch 500 --batch_size 64 \
+  --d_model 128 --layers 4 --heads 8 --dropout 0.0 --lr 3e-4
+```
+Artifacts:
+- CKPT: `/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt`
+- CSV: `/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_metrics.csv`
+
+Expected validation (targets):
+- p0|E ≈ 0.5, p0|O ≈ 0.0; frac_O ≈ 1/3
+
+## Dataset sanity (Even Process)
+Command:
+```bash
+uv run python /home/matteo/NeuralCSSR/notebook_experiments/ebt/check_even_dataset.py \
+  --data /home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat
+```
+
+## Cross-eval (Even → GM)
+Command:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/eval_ebm.py \
+  --ckpt /home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt \
+  --data /home/matteo/NeuralCSSR/notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat \
+  --device auto --context_window 128 --gen_prefix_len 64 --gen_steps 256 --temperature 1.0
+```
+Notes: Expect poor OOD GM behavior (violate no-00).
+
+## Visualization — Feature extraction & plots
+Golden Mean:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/viz_generate_ebm.py \
+  --ckpt /home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_ckpt.pt \
+  --preset golden_mean --device auto --context_window 64 \
+  --embed pca --layers final,0,1 \
+  --out_dir /home/matteo/NeuralCSSR/notebook_experiments/golden_mean/viz
+```
+Even Process:
+```bash
+uv run --with torch python /home/matteo/NeuralCSSR/notebook_experiments/ebt/viz_generate_ebm.py \
+  --ckpt /home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt \
+  --preset even_process --device auto --context_window 128 \
+  --embed pca --layers final,0,1 \
+  --out_dir /home/matteo/NeuralCSSR/notebook_experiments/even_process/viz
+```
+Outputs (per run):
+- `viz_scatter.png` (hidden scatter colored by causal state with P(1) overlay)
+- `viz_centroids.png` (state centroids + transition graph)
+- `viz_trajectory.png` (short trajectory)
+- `viz_cache.npz` (arrays: H, states, p1)
+- Optional per-layer caches: `viz_cache_layer_{ls}.npz`
+
+## Visualization — Metrics (redundancy, per-state kernel, CKA)
+Golden Mean:
+```bash
+uv run python /home/matteo/NeuralCSSR/notebook_experiments/ebt/viz_metrics_ebm.py \
+  --out_dir /home/matteo/NeuralCSSR/notebook_experiments/golden_mean/viz \
+  --layers 0,1,final
+```
+Even Process:
+```bash
+uv run python /home/matteo/NeuralCSSR/notebook_experiments/ebt/viz_metrics_ebm.py \
+  --out_dir /home/matteo/NeuralCSSR/notebook_experiments/even_process/viz \
+  --layers 0,1,final
+```
+Outputs:
+- `viz_redundancy.png` (probe accuracy vs feature fraction)
+- `viz_kernel_pred.txt` (mean predicted P(1) per causal state)
+- `viz_cka.png` if ≥2 layer caches exist; otherwise `viz_cka.txt`
+
+Observed (GM `viz_kernel_pred.txt`):
+```text
+{'pred_mean_p1_per_state': [0.6919885277748108, 0.4469303786754608]}
+```
+Note: values are P(1) means by our two GM pre-states; exact ordering depends on the state label mapping used when generating states.
+
+## Brief comparison to nanoGPT (see docs/experiments_golden_mean.md)
+- nanoGPT (AR-only) GM: NLL ≈ 0.674 bits; p(0|0) ≈ 0.000; p(0|1) ≈ 0.498
+- nanoGPT + aux state head: behavior preserved; pre-state linear decodability improves substantially
+- EBM (this run) GM: ≈ 0.656 bits; p(0|0) ≈ 0.004; p(0|1) ≈ 0.553; representation plots show two regimes aligning with GM states
+
+## Notes / Next
+- For Even Process: increase context window (128–256), keep dropout=0.0; consider longer training for sharper parity separation.
+- Optional: add an auxiliary parity loss for EBM if parity decodability is a target.
+

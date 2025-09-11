@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+---
+# Project Structure Guide
+
+- Entry points
+  - Runner: [run_neural_cssr.py](mdc:run_neural_cssr.py)
+  - Docs: [docs/neural_cssr_pipeline.md](mdc:docs/neural_cssr_pipeline.md)
+
+- Neural models
+  - Language Model (standard: nanoGPT): [nanoGPT](mdc:nanoGPT)
+    - Configs: [nanoGPT/config/train_golden_mean_char.py](mdc:nanoGPT/config/train_golden_mean_char.py), [nanoGPT/config/train_even_process_char.py](mdc:nanoGPT/config/train_even_process_char.py)
+    - Workflow: [docs/neural_cssr_pipeline.md](mdc:docs/neural_cssr_pipeline.md), [docs/experiments_golden_mean.md](mdc:docs/experiments_golden_mean.md)
+  - Research prototype (internal transformer): [src/neural_cssr/neural/transformer.py](mdc:src/neural_cssr/neural/transformer.py)
+  - EBM (self-contained): [notebook_experiments/ebt/models.py](mdc:notebook_experiments/ebt/models.py)
+
+- EBM training & evaluation
+  - Train script: [notebook_experiments/ebt/train_golden_mean.py](mdc:notebook_experiments/ebt/train_golden_mean.py)
+  - Dataset check (Even Process): [notebook_experiments/ebt/check_even_dataset.py](mdc:notebook_experiments/ebt/check_even_dataset.py)
+  - Cross-eval / generation: [notebook_experiments/ebt/eval_ebm.py](mdc:notebook_experiments/ebt/eval_ebm.py)
+  - Experiment log: [notebook_experiments/ebt/experiment_even_vs_gm.mdc](mdc:notebook_experiments/ebt/experiment_even_vs_gm.mdc)
+
+- Data generation
+  - FSM generator: [pysm_generator.py](mdc:pysm_generator.py)
+  - Golden Mean data: [notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat](mdc:notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat)
+  - Even Process data: [notebook_experiments/even_process/even_process.dat](mdc:notebook_experiments/even_process/even_process.dat)
+
+Notes
+- Datasets are 0/1 text sequences.
+- Prefer absolute paths in commands; `uv run` is used to manage deps.
