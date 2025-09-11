@@ -165,13 +165,13 @@ def main():
 
     # Resolve preset defaults
     if args.preset == 'golden_mean':
-        default_data = Path('/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat')
-        default_ckpt = Path('/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_ckpt.pt')
-        default_csv = Path('/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/ebm_metrics.csv')
+        default_data = Path('/home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat')
+        default_ckpt = Path('/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/golden_mean_ebm.pt')
+        default_csv = Path('/home/matteo/NeuralCSSR/experiments/ebm/metrics/golden_mean_metrics.csv')
     elif args.preset == 'even_process':
-        default_data = Path('/home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat')
-        default_ckpt = Path('/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_ckpt.pt')
-        default_csv = Path('/home/matteo/NeuralCSSR/notebook_experiments/even_process/ebm_metrics.csv')
+        default_data = Path('/home/matteo/NeuralCSSR/experiments/datasets/even_process/even_process.dat')
+        default_ckpt = Path('/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/even_process_ebm.pt')
+        default_csv = Path('/home/matteo/NeuralCSSR/experiments/ebm/metrics/even_process_metrics.csv')
     else:
         default_data = None; default_ckpt = None; default_csv = None
 

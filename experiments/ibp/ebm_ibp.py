@@ -406,9 +406,9 @@ def main():
     args = ap.parse_args()
 
     if args.preset == 'golden_mean' and args.data is None:
-        args.data = Path('/home/matteo/NeuralCSSR/notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat')
+        args.data = Path('/home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat')
     elif args.preset == 'even_process' and args.data is None:
-        args.data = Path('/home/matteo/NeuralCSSR/notebook_experiments/even_process/even_process.dat')
+        args.data = Path('/home/matteo/NeuralCSSR/experiments/datasets/even_process/even_process.dat')
     elif args.preset == 'custom' and (args.data is None or not args.data.exists()):
         raise FileNotFoundError('Provide --data for preset=custom')
 
