@@ -1,0 +1,2 @@
+epoch,val_loss_nats,val_loss_bits,val_ppl,p00,p01,zero_violation,p0_given_E,p0_given_O,frac_O,argmax0_given_O
+1,0.549337,0.792526,1.732105,0.505958,0.267412,0.950229,0.426461,0.188272,0.334200,0.000000

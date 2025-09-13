@@ -1,0 +1,402 @@
+{
+  "preset": "golden_mean",
+  "ckpt": "/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/golden_mean_ar.pt",
+  "data": "/home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat",
+  "val_data": null,
+  "num_states": 2,
+  "val_examples": 2000,
+  "train_examples": 100,
+  "num_probe_datasets": 20,
+  "tune_scope": "full",
+  "ft_steps": 50,
+  "ft_lr": 0.001,
+  "ft_batch_size": 64,
+  "surjective_only": true,
+  "balance_by_label": true,
+  "rib_mean": 0.9982053923096921,
+  "rib_std": 0.0008963725407850534,
+  "dib_mean": 0.8484223349261191,
+  "dib_std": 0.356409203805472,
+  "per_task": [
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988368862497979,
+      "dib": 0.996937212863706,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9975969462457421,
+      "dib": 0.9985152190051967,
+      "nt_pre": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      },
+      "nt_post": {
+        "val_ce": NaN,
+        "val_acc": 0.654,
+        "p0_given_0": NaN,
+        "p0_given_1": NaN,
+        "zero_violation_rate": 0.0030627871362940277
+      }
+    }
+  ]
+}

@@ -23,12 +23,28 @@ import torch.nn.functional as F
 # Simplified imports - using minimal utils instead of complex src/ infrastructure
 from neural_cssr_utils import NeuralCSSRProbabilityProvider, ClassicalCSSR, TransCSSRWrapper
 
+# EBM/AR model support
+try:
+    import sys
+    sys.path.append('experiments/ebm')
+    from models import EnergyBasedBinaryLM, AutoRegressiveBinaryLM
+    _HAS_EBM_AR = True
+except Exception:
+    _HAS_EBM_AR = False
+
 # Optional: nanoGPT integration
 try:
     from nanoGPT.model import GPTConfig as NanoGPTConfig, GPT as NanoGPT
     _HAS_NANOGPT = True
 except Exception:
     _HAS_NANOGPT = False
+
+def create_model(*args, **kwargs):
+    """Placeholder for a local cssr_nlp model factory.
+    Training this model isn't supported in this script currently.
+    Provide --ebm_ar_ckpt or --nanogpt_out_dir instead.
+    """
+    raise NotImplementedError("cssr_nlp training path not implemented; use --ebm_ar_ckpt or --nanogpt_out_dir")
 
 
 class NanoGPTAdapter(torch.nn.Module):
@@ -86,15 +102,41 @@ def train_cssr_nlp_on_dat(data_path: Path, model, context_window: int, epochs: i
 @torch.no_grad()
 def model_next_probs(model, history_ids: List[int], device: torch.device, temperature: float = 1.0,
                      prob_clip: float = 1e-3) -> Tuple[float, float]:
+    """Get next-token probabilities [P(0), P(1)] for a given history.
+
+    - Uses model.generate_probabilities if available (preferred for EBM/AR).
+    - Otherwise, falls back to model(x) logits with optional temperature.
+    - Applies probability clipping and renormalization for stability.
+    """
     ids = history_ids
     if not ids:
         p0 = p1 = 0.5
     else:
         x = torch.tensor([ids], dtype=torch.long, device=device)
-        logits = model(x)[:, -1]
-        if temperature and temperature != 1.0:
-            logits = logits / temperature
-        probs = torch.softmax(logits, dim=-1).squeeze(0)
+        # Preferred path: models that expose generate_probabilities (EBM/AR)
+        if hasattr(model, 'generate_probabilities'):
+            probs = model.generate_probabilities(x)  # [B, T, 2] or [B, 1, 2]
+            # Take last position
+            if probs.dim() == 3:
+                probs = probs[:, -1, :]
+            # Retemper probabilities if requested: p' ∝ p^(1/T)
+            if temperature and temperature != 1.0:
+                power = 1.0 / float(temperature)
+                probs = torch.clamp(probs, min=1e-12)
+                probs = probs.pow(power)
+                probs = probs / probs.sum(dim=-1, keepdim=True)
+            probs = probs.squeeze(0)
+        else:
+            # Fallback: assume model(x) returns logits (or (logits, ...))
+            logits = model(x)
+            if isinstance(logits, (tuple, list)):
+                logits = logits[0]
+            # Support [B, T, 2] or [B, 2]
+            if logits.dim() == 3:
+                logits = logits[:, -1, :]
+            if temperature and temperature != 1.0:
+                logits = logits / float(temperature)
+            probs = torch.softmax(logits, dim=-1).squeeze(0)
         p0 = float(probs[0].item()); p1 = float(probs[1].item())
     # clip and renormalize
     p0 = max(prob_clip, min(1.0 - prob_clip, p0))
@@ -255,6 +297,7 @@ def main():
     p.add_argument('--pseudo_count_scale', type=int, default=100, help='Pseudo-count mass for transCSSR backend')
     p.add_argument('--json_only', action='store_true', help='Emit only final JSON to stdout (suppress logs)')
     p.add_argument('--mix_empirical', type=float, default=0.0, help='Mix factor in [0,1] to blend empirical counts with neural probs (transcssr backend)')
+    p.add_argument('--empirical_only', action='store_true', help='Use empirical counts only (no neural replacement) in transcssr backend')
     p.add_argument('--temp_counts', type=float, default=1.0, help='Temperature to soften probabilities before forming counts (transcssr backend)')
     # JS/JS-H settings
     p.add_argument('--state_metric', type=str, choices=['js','jsh'], default='js')
@@ -263,19 +306,65 @@ def main():
     p.add_argument('--prob_clip', type=float, default=1e-3)
     p.add_argument('--temperature', type=float, default=1.0)
     p.add_argument('--min_count', type=int, default=5)
+    # Calibration for transCSSR
+    p.add_argument('--calibration', type=str, choices=['none','platt'], default='none', help='Apply calibration to model probs in transCSSR backend')
+    p.add_argument('--fit_calibration', action='store_true', help='Fit calibration params against empirical morphs from the data')
+    p.add_argument('--calib_a', type=float, help='Override Platt a parameter')
+    p.add_argument('--calib_b', type=float, help='Override Platt b parameter')
     # Model I/O
     p.add_argument('--model_out', type=Path, help='Path to save trained model .pt')
     p.add_argument('--model_in', type=Path, help='Path to load model .pt (skip training if provided)')
     # nanoGPT integration
     p.add_argument('--nanogpt_out_dir', type=Path, help='Path to nanoGPT out_dir containing ckpt.pt (use nanoGPT model)')
+    # EBM/AR model integration
+    p.add_argument('--ebm_ar_ckpt', type=Path, help='Path to EBM or AR model checkpoint (.pt file)')
     # DOT export
     p.add_argument('--dot_out', type=Path, help='Optional path to save DOT for neural_js backend')
     args = p.parse_args()
 
     device = torch.device('cuda' if (args.device == 'auto' and torch.cuda.is_available()) else (args.device if args.device != 'auto' else 'cpu'))
 
-    # Create / load model
-    if args.nanogpt_out_dir:
+    # Create / load model (skip if transcssr+empirical_only)
+    model = None
+    if args.backend == 'transcssr' and args.empirical_only:
+        pass  # no model needed
+    elif args.ebm_ar_ckpt:
+        if not _HAS_EBM_AR:
+            raise RuntimeError("EBM/AR models not available. Ensure experiments/ebm/models.py is accessible.")
+        if not args.ebm_ar_ckpt.exists():
+            raise FileNotFoundError(f"EBM/AR checkpoint not found at {args.ebm_ar_ckpt}")
+        
+        ckpt = torch.load(args.ebm_ar_ckpt, map_location=device)
+        cfg = ckpt.get('config', {})
+        model_type = cfg.get('model_type', 'ebm_binary')
+        context_window = cfg.get('context_window', args.context_window)
+        
+        if model_type == 'ar_binary':
+            model = AutoRegressiveBinaryLM(
+                vocab_size=3,
+                output_vocab_size=2,
+                d_model=int(cfg.get('d_model', 128)),
+                nhead=int(cfg.get('heads', 8)),
+                num_layers=int(cfg.get('layers', 4)),
+                max_len=context_window,
+                dropout=float(cfg.get('dropout', 0.0)),
+            ).to(device)
+        else:  # ebm_binary
+            model = EnergyBasedBinaryLM(
+                vocab_size=3,
+                output_vocab_size=2,
+                d_model=int(cfg.get('d_model', 128)),
+                nhead=int(cfg.get('heads', 8)),
+                num_layers=int(cfg.get('layers', 4)),
+                max_len=context_window,
+                dropout=float(cfg.get('dropout', 0.0)),
+            ).to(device)
+        
+        model.load_state_dict(ckpt['state_dict'])
+        model.eval()
+        if not args.json_only:
+            print(f"Loaded {model_type} model from {args.ebm_ar_ckpt}")
+    elif args.nanogpt_out_dir:
         if not _HAS_NANOGPT:
             raise RuntimeError("nanoGPT not available for import. Ensure nanoGPT package directory is present.")
         ckpt_path = args.nanogpt_out_dir / 'ckpt.pt'
@@ -317,8 +406,86 @@ def main():
             if not args.json_only:
                 print(f"Saved model to {args.model_out}")
 
-    # Build neural probability provider
-    provider = NeuralCSSRProbabilityProvider(model, device=device.type, context_window=args.context_window)
+    # Build neural probability provider (temperature-aware adapter for transCSSR)
+    provider = None
+    if model is not None:
+        provider = NeuralCSSRProbabilityProvider(model, device=device.type, context_window=args.context_window)
+
+    class TempAwareProvider:
+        """Adapter that applies temperature/clipping via model_next_probs and optional Platt calibration."""
+        def __init__(self, model, device: torch.device, context_window: int, temperature: float, prob_clip: float, platt_params=None):
+            self.model = model
+            self.device = device
+            self.context_window = context_window
+            self.temperature = temperature
+            self.prob_clip = prob_clip
+            self.platt_params = platt_params  # dict with keys 'a','b' or None
+
+        def get_probabilities(self, context: list) -> list:
+            ids = list(context)[-self.context_window:]
+            p0, p1 = model_next_probs(self.model, ids, self.device, temperature=self.temperature, prob_clip=self.prob_clip)
+            if self.platt_params is not None:
+                # Apply Platt on logit of p1; map to calibrated p1'; keep binary complement for p0'
+                import math
+                a = float(self.platt_params.get('a', 1.0)); b = float(self.platt_params.get('b', 0.0))
+                eps = 1e-12
+                p1c = max(eps, min(1.0 - eps, p1))
+                logit = math.log(p1c / (1.0 - p1c))
+                s = a * logit + b
+                # sigmoid
+                p1_new = 1.0 / (1.0 + math.exp(-s))
+                p0_new = 1.0 - p1_new
+                # clip and renorm
+                p0_new = max(self.prob_clip, min(1.0 - self.prob_clip, p0_new))
+                p1_new = max(self.prob_clip, min(1.0 - self.prob_clip, p1_new))
+                ssum = p0_new + p1_new
+                return [p0_new / ssum, p1_new / ssum]
+            return [p0, p1]
+
+    def fit_platt_against_empirical(tokens: List[int], model, device: torch.device, L_max: int, context_window: int, temperature: float, prob_clip: float, min_count: int = 5) -> dict:
+        """Fit Platt calibration p' = sigmoid(a*logit(p)+b) against empirical morphs, weighted by marginal counts."""
+        from math import log
+        import torch
+        # Build empirical morphs: history -> (count, p_emp)
+        counts: Dict[str, int] = {}
+        ones: Dict[str, int] = {}
+        for L in range(1, L_max + 1):
+            for t in range(L, len(tokens)):
+                h = ''.join(str(x) for x in tokens[t - L:t])
+                y = tokens[t]
+                counts[h] = counts.get(h, 0) + 1
+                if y == 1:
+                    ones[h] = ones.get(h, 0) + 1
+        # Prepare data vectors
+        histories = [h for h, c in counts.items() if c >= min_count]
+        if not histories:
+            return {'a': 1.0, 'b': 0.0}
+        weights = torch.tensor([counts[h] for h in histories], dtype=torch.float64, device=device)
+        targets = torch.tensor([ (ones.get(h,0) / float(counts[h])) for h in histories ], dtype=torch.float64, device=device)
+        # Model probabilities for histories
+        logits_list = []  # use logit(p1) from model_next_probs to avoid forward changes
+        with torch.no_grad():
+            for h in histories:
+                ids = [int(c) for c in h][-context_window:]
+                p0, p1 = model_next_probs(model, ids, device, temperature=temperature, prob_clip=prob_clip)
+                p1c = max(1e-12, min(1.0 - 1e-12, p1))
+                logits_list.append(log(p1c / (1.0 - p1c)))
+        margins = torch.tensor(logits_list, dtype=torch.float64, device=device)
+        # Optimize a,b to minimize weighted BCE(sigmoid(a*m+b), targets)
+        a = torch.tensor(1.0, dtype=torch.float64, device=device, requires_grad=True)
+        b = torch.tensor(0.0, dtype=torch.float64, device=device, requires_grad=True)
+        optimizer = torch.optim.LBFGS([a, b], lr=0.25, max_iter=500, line_search_fn='strong_wolfe')
+
+        def closure():
+            optimizer.zero_grad(set_to_none=True)
+            s = a * margins + b
+            # binary cross-entropy with logits; targets are probabilities—treat as soft labels
+            loss = torch.nn.functional.binary_cross_entropy_with_logits(s, targets, weight=weights)
+            loss.backward()
+            return loss
+
+        optimizer.step(closure)
+        return {'a': float(a.detach().item()), 'b': float(b.detach().item())}
 
     if args.backend == 'internal':
         # Run CSSR with our internal neural provider backend
@@ -337,15 +504,100 @@ def main():
             'kl_divergence': 'G',
             'permutation': 'chi2',  # not supported in transCSSR; fallback
         }
-        wrapper = TransCSSRWrapper(significance_level=args.alpha, test_type=test_type_map.get(args.test_type, 'chi2'))
-        result = wrapper.run_cssr_neural(
-            provider, string_x, string_y, max_length=args.L_max,
-            pseudo_count_scale=args.pseudo_count_scale,
-            prob_clip=args.prob_clip if hasattr(args, 'prob_clip') else 1e-3,
-            temperature=args.temp_counts,
-            mix_empirical=args.mix_empirical,
-        )
-        summary = result
+        wrapper = TransCSSRWrapper(significance_level=args.alpha, test_type=test_type_map.get(args.test_type, 'chi2'), mix_empirical=args.mix_empirical)
+
+        # Load the data tokens
+        tokens = load_binary_tokens(args.data)
+
+        if args.empirical_only:
+            epsilon, invepsilon, morph_by_state = wrapper.run_cssr_empirical(tokens, L_max=args.L_max)
+        else:
+            # Optional calibration
+            platt_params = None
+            if args.calibration == 'platt':
+                if args.fit_calibration:
+                    try:
+                        platt_params = fit_platt_against_empirical(tokens, model, device, args.L_max, args.context_window, args.temperature, args.prob_clip, min_count=args.min_count)
+                        if not args.json_only:
+                            print(f"Fitted Platt calibration: a={platt_params['a']:.4f}, b={platt_params['b']:.4f}")
+                    except Exception as e:
+                        if not args.json_only:
+                            print(f"Warning: failed to fit Platt calibration: {e}; proceeding without calibration")
+                        platt_params = None
+                # Manual override
+                if args.calib_a is not None and args.calib_b is not None:
+                    platt_params = {'a': float(args.calib_a), 'b': float(args.calib_b)}
+
+            temp_provider = TempAwareProvider(model, device, args.context_window, args.temperature, args.prob_clip, platt_params=platt_params)
+            epsilon, invepsilon, morph_by_state = wrapper.run_cssr_with_neural_provider(
+                tokens, temp_provider, L_max=args.L_max
+            )
+
+        # Format results similar to neural_js backend
+        # 1) Build histories per state from epsilon mapping
+        histories_by_state: Dict[int, set] = {}
+        for key, sid in epsilon.items():
+            try:
+                hx, hy = key  # (Xpast, Ypast)
+            except Exception:
+                # Keys may be strings from serialization; skip
+                continue
+            histories_by_state.setdefault(int(sid), set()).add(hy)
+
+        # 2) Compute per-state distribution vectors
+        def get_dist_for_state(sid: int, hist_list: List[str]) -> List[float]:
+            if not hist_list:
+                return [0.5, 0.5]
+            # If we have morph_by_state from transCSSR, use that; else average model predictions
+            if 'morph_by_state' in locals() and sid in morph_by_state:
+                v = morph_by_state[sid]
+                # Expect a 2-element vector of counts or probabilities; normalize to probs
+                try:
+                    if isinstance(v, (list, tuple)) and len(v) == 2:
+                        s = float(v[0]) + float(v[1])
+                        if s > 0:
+                            return [float(v[0]) / s, float(v[1]) / s]
+                except Exception:
+                    pass
+                return [0.5, 0.5]
+            if model is None:
+                return [0.5, 0.5]
+            acc0 = 0.0; acc1 = 0.0; n = 0
+            for h in hist_list:
+                ids = [int(c) for c in h][-args.context_window:]
+                p0, p1 = model_next_probs(model, ids, device, temperature=args.temperature, prob_clip=args.prob_clip)
+                acc0 += p0; acc1 += p1; n += 1
+            return [acc0 / max(n, 1), acc1 / max(n, 1)]
+
+        discovered_states = {}
+        for sid in sorted(histories_by_state.keys()):
+            hist_list = sorted(list(histories_by_state[sid]))
+            discovered_states[str(sid)] = {
+                'id': sid,
+                'histories': hist_list,
+                'distribution_vector': get_dist_for_state(sid, hist_list),
+                'weight': len(hist_list)
+            }
+
+        # Convert tuple keys to strings for JSON serialization
+        epsilon_serializable = {str(k): v for k, v in epsilon.items()}
+
+        summary = {
+            'discovered_structure': {
+                'num_states': len(invepsilon),
+                'states': discovered_states,
+                'epsilon_mapping': epsilon_serializable
+            },
+            'execution_info': {
+                'converged': True,
+                'algorithm': 'transcssr',
+                'parameters': {
+                    'L_max': args.L_max,
+                    'significance_level': args.alpha,
+                    'test_type': args.test_type
+                }
+            }
+        }
     else:
         # JS/JS-H backend
         summary = run_neural_cssr_js(

@@ -9,13 +9,13 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-# Import the EBM model
+# Import both EBM and AR models
 try:
-    from ..ebt.models import EnergyBasedBinaryLM  # when executed as a module
+    from ..ebm.models import EnergyBasedBinaryLM, AutoRegressiveBinaryLM  # when executed as a module
 except Exception:
     import sys
-    sys.path.append(str(Path(__file__).resolve().parents[1] / 'ebt'))
-    from models import EnergyBasedBinaryLM  # type: ignore
+    sys.path.append(str(Path(__file__).resolve().parents[1] / 'ebm'))
+    from models import EnergyBasedBinaryLM, AutoRegressiveBinaryLM  # type: ignore
 
 
 def load_binary_tokens(dat_path: Path) -> List[int]:
@@ -52,31 +52,50 @@ def compute_states_even_process(tokens: List[int]) -> List[int]:
     return states
 
 
-def set_tune_scope(model: EnergyBasedBinaryLM, scope: str) -> None:
-    """scope: 'full' or 'head' (only energy_head trainable)."""
+def set_tune_scope(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, scope: str) -> None:
+    """scope: 'full' or 'head' (only energy_head/lm_head trainable)."""
     if scope == 'full':
         for p in model.parameters():
             p.requires_grad = True
     else:
         for p in model.parameters():
             p.requires_grad = False
-        for p in model.energy_head.parameters():
-            p.requires_grad = True
+        # Use the appropriate head based on model type
+        if hasattr(model, 'energy_head'):
+            for p in model.energy_head.parameters():
+                p.requires_grad = True
+        elif hasattr(model, 'lm_head'):
+            for p in model.lm_head.parameters():
+                p.requires_grad = True
 
 
-def build_model_from_ckpt(ckpt_path: Path, device: torch.device, context_window: int | None = None) -> Tuple[EnergyBasedBinaryLM, dict]:
+def build_model_from_ckpt(ckpt_path: Path, device: torch.device, context_window: int | None = None) -> Tuple[EnergyBasedBinaryLM | AutoRegressiveBinaryLM, dict]:
     ckpt = torch.load(ckpt_path, map_location=device)
     cfg = ckpt.get('config', {})
     cw = context_window or int(cfg.get('context_window', 128))
-    model = EnergyBasedBinaryLM(
-        vocab_size=3,
-        output_vocab_size=2,
-        d_model=int(cfg.get('d_model', 128)),
-        nhead=int(cfg.get('heads', 8)),
-        num_layers=int(cfg.get('layers', 4)),
-        max_len=cw,
-        dropout=float(cfg.get('dropout', 0.0)),
-    ).to(device)
+    model_type = cfg.get('model_type', 'ebm_binary')
+    
+    if model_type == 'ar_binary':
+        model = AutoRegressiveBinaryLM(
+            vocab_size=3,
+            output_vocab_size=2,
+            d_model=int(cfg.get('d_model', 128)),
+            nhead=int(cfg.get('heads', 8)),
+            num_layers=int(cfg.get('layers', 4)),
+            max_len=cw,
+            dropout=float(cfg.get('dropout', 0.0)),
+        ).to(device)
+    else:
+        model = EnergyBasedBinaryLM(
+            vocab_size=3,
+            output_vocab_size=2,
+            d_model=int(cfg.get('d_model', 128)),
+            nhead=int(cfg.get('heads', 8)),
+            num_layers=int(cfg.get('layers', 4)),
+            max_len=cw,
+            dropout=float(cfg.get('dropout', 0.0)),
+        ).to(device)
+    
     model.load_state_dict(ckpt['state_dict'])
     model.eval()
     return model, ckpt
@@ -114,7 +133,7 @@ def batch_from_indices(tokens: np.ndarray, indices: np.ndarray, context_window: 
 
 
 @torch.no_grad()
-def predict_on_positions(model: EnergyBasedBinaryLM, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> np.ndarray:
+def predict_on_positions(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> np.ndarray:
     preds: List[int] = []
     model.eval()
     for s in range(0, len(positions), batch_size):
@@ -130,7 +149,7 @@ def predict_on_positions(model: EnergyBasedBinaryLM, tokens: np.ndarray, positio
 
 
 @torch.no_grad()
-def logits_on_positions(model: EnergyBasedBinaryLM, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> torch.Tensor:
+def logits_on_positions(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> torch.Tensor:
     outs: List[torch.Tensor] = []
     model.eval()
     for s in range(0, len(positions), batch_size):
@@ -145,7 +164,7 @@ def logits_on_positions(model: EnergyBasedBinaryLM, tokens: np.ndarray, position
 
 
 @torch.no_grad()
-def eval_next_token_metrics(model: EnergyBasedBinaryLM, preset: str, tokens: np.ndarray, positions: np.ndarray, states_before: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> dict:
+def eval_next_token_metrics(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, preset: str, tokens: np.ndarray, positions: np.ndarray, states_before: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> dict:
     logits = logits_on_positions(model, tokens, positions, context_window, pad_id, device, batch_size)
     probs = torch.softmax(logits, dim=-1).cpu().numpy()
     targets = tokens[positions].astype(np.int64)
@@ -180,7 +199,7 @@ def eval_next_token_metrics(model: EnergyBasedBinaryLM, preset: str, tokens: np.
 
 
 @torch.no_grad()
-def last_hidden_on_positions(model: EnergyBasedBinaryLM, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> torch.Tensor:
+def last_hidden_on_positions(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> torch.Tensor:
     feats: List[torch.Tensor] = []
     model.eval()
     d_model = model.d_model
@@ -204,7 +223,7 @@ def last_hidden_on_positions(model: EnergyBasedBinaryLM, tokens: np.ndarray, pos
     return torch.cat(feats, dim=0)
 
 
-def train_probe_head(model: EnergyBasedBinaryLM, tokens: np.ndarray, positions: np.ndarray, labels: np.ndarray, context_window: int, pad_id: int, device: torch.device, steps: int, lr: float, batch_size: int, seed: int) -> torch.nn.Module:
+def train_probe_head(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, tokens: np.ndarray, positions: np.ndarray, labels: np.ndarray, context_window: int, pad_id: int, device: torch.device, steps: int, lr: float, batch_size: int, seed: int) -> torch.nn.Module:
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     head = torch.nn.Linear(model.d_model, 2).to(device)
@@ -226,7 +245,7 @@ def train_probe_head(model: EnergyBasedBinaryLM, tokens: np.ndarray, positions: 
 
 
 @torch.no_grad()
-def predict_with_probe_head(model: EnergyBasedBinaryLM, head: torch.nn.Module, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> np.ndarray:
+def predict_with_probe_head(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, head: torch.nn.Module, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> np.ndarray:
     preds: List[int] = []
     model.eval(); head.eval()
     for s in range(0, len(positions), batch_size):
@@ -244,7 +263,7 @@ def compute_task_labels(
     tokens: np.ndarray,
     positions: np.ndarray,
     states_all: np.ndarray,
-    base_model: EnergyBasedBinaryLM,
+    base_model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM,
     context_window: int,
     pad_id: int,
     device: torch.device,
@@ -289,19 +308,32 @@ def compute_task_labels(
     raise ValueError(f'Unknown task: {task}')
 
 
-def finetune_on_task(base_state: dict, ckpt_cfg: dict, device: torch.device, scope: str, tokens: np.ndarray, train_positions: np.ndarray, train_labels: np.ndarray, context_window: int, pad_id: int, steps: int, lr: float, batch_size: int, seed: int) -> EnergyBasedBinaryLM:
+def finetune_on_task(base_state: dict, ckpt_cfg: dict, device: torch.device, scope: str, tokens: np.ndarray, train_positions: np.ndarray, train_labels: np.ndarray, context_window: int, pad_id: int, steps: int, lr: float, batch_size: int, seed: int) -> EnergyBasedBinaryLM | AutoRegressiveBinaryLM:
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     # Rebuild model fresh from base_state each task
-    model = EnergyBasedBinaryLM(
-        vocab_size=3,
-        output_vocab_size=2,
-        d_model=int(ckpt_cfg.get('d_model', 128)),
-        nhead=int(ckpt_cfg.get('heads', 8)),
-        num_layers=int(ckpt_cfg.get('layers', 4)),
-        max_len=context_window,
-        dropout=float(ckpt_cfg.get('dropout', 0.0)),
-    ).to(device)
+    model_type = ckpt_cfg.get('model_type', 'ebm_binary')
+    
+    if model_type == 'ar_binary':
+        model = AutoRegressiveBinaryLM(
+            vocab_size=3,
+            output_vocab_size=2,
+            d_model=int(ckpt_cfg.get('d_model', 128)),
+            nhead=int(ckpt_cfg.get('heads', 8)),
+            num_layers=int(ckpt_cfg.get('layers', 4)),
+            max_len=context_window,
+            dropout=float(ckpt_cfg.get('dropout', 0.0)),
+        ).to(device)
+    else:
+        model = EnergyBasedBinaryLM(
+            vocab_size=3,
+            output_vocab_size=2,
+            d_model=int(ckpt_cfg.get('d_model', 128)),
+            nhead=int(ckpt_cfg.get('heads', 8)),
+            num_layers=int(ckpt_cfg.get('layers', 4)),
+            max_len=context_window,
+            dropout=float(ckpt_cfg.get('dropout', 0.0)),
+        ).to(device)
     model.load_state_dict(base_state)
     set_tune_scope(model, scope)
     model.train()

@@ -9,13 +9,13 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-# Local imports for the EBM model
+# Local imports for both EBM and AR models
 try:
-    from .models import EnergyBasedBinaryLM
+    from .models import EnergyBasedBinaryLM, AutoRegressiveBinaryLM
 except ImportError:
     import sys
     sys.path.append(str(Path(__file__).resolve().parent))
-    from models import EnergyBasedBinaryLM
+    from models import EnergyBasedBinaryLM, AutoRegressiveBinaryLM
 
 # Reuse visualization utilities from nanoGPT/rep_viz.py
 _ROOT = Path(__file__).resolve().parents[2]
@@ -71,7 +71,7 @@ def build_true_transition(states: np.ndarray, S: int) -> np.ndarray:
 
 
 @torch.no_grad()
-def _encoder_hidden_and_p1_for_chunk(model: EnergyBasedBinaryLM,
+def _encoder_hidden_and_p1_for_chunk(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM,
                                      chunk: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Compute hidden features (post-encoder) and per-position P(token=1) for a chunk.
     chunk: LongTensor of shape (1, T)
@@ -87,14 +87,22 @@ def _encoder_hidden_and_p1_for_chunk(model: EnergyBasedBinaryLM,
     seq_len = chunk.size(1)
     causal_mask = torch.triu(torch.ones(seq_len, seq_len, device=device), diagonal=1).bool()
     x = model.encoder(x, mask=causal_mask, src_key_padding_mask=None)  # (1,T,C)
-    energies = model.energy_head(x)  # (1,T,2)
-    scores = -energies
+    
+    # Handle different head types
+    if hasattr(model, 'energy_head'):
+        # EBM model: energy -> scores
+        energies = model.energy_head(x)  # (1,T,2)
+        scores = -energies
+    else:
+        # AR model: direct logits
+        scores = model.lm_head(x)  # (1,T,2)
+    
     probs = F.softmax(scores, dim=-1).squeeze(0)  # (T,2)
     return x.squeeze(0), probs[:, 1]
 
 
 @torch.no_grad()
-def extract_prefix_features_and_nextp(model: EnergyBasedBinaryLM,
+def extract_prefix_features_and_nextp(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM,
                                       tokens: np.ndarray,
                                       device: torch.device,
                                       context_window: int,
@@ -143,7 +151,7 @@ def extract_prefix_features_and_nextp(model: EnergyBasedBinaryLM,
 
 
 @torch.no_grad()
-def extract_hidden_states_prefix_only_with_hook(model: EnergyBasedBinaryLM,
+def extract_hidden_states_prefix_only_with_hook(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM,
                                                 hook_module: torch.nn.Module,
                                                 tokens: np.ndarray,
                                                 device: torch.device,
@@ -228,15 +236,29 @@ def main():
     ckpt = torch.load(args.ckpt, map_location=device)
     cfg = ckpt.get('config', {})
     context_window = args.context_window or int(cfg.get('context_window', 128))
-    model = EnergyBasedBinaryLM(
-        vocab_size=3,
-        output_vocab_size=2,
-        d_model=int(cfg.get('d_model', 128)),
-        nhead=int(cfg.get('heads', 8)),
-        num_layers=int(cfg.get('layers', 4)),
-        max_len=context_window,
-        dropout=float(cfg.get('dropout', 0.0)),
-    ).to(device)
+    model_type = cfg.get('model_type', 'ebm_binary')
+    
+    if model_type == 'ar_binary':
+        model = AutoRegressiveBinaryLM(
+            vocab_size=3,
+            output_vocab_size=2,
+            d_model=int(cfg.get('d_model', 128)),
+            nhead=int(cfg.get('heads', 8)),
+            num_layers=int(cfg.get('layers', 4)),
+            max_len=context_window,
+            dropout=float(cfg.get('dropout', 0.0)),
+        ).to(device)
+    else:
+        model = EnergyBasedBinaryLM(
+            vocab_size=3,
+            output_vocab_size=2,
+            d_model=int(cfg.get('d_model', 128)),
+            nhead=int(cfg.get('heads', 8)),
+            num_layers=int(cfg.get('layers', 4)),
+            max_len=context_window,
+            dropout=float(cfg.get('dropout', 0.0)),
+        ).to(device)
+    
     model.load_state_dict(ckpt['state_dict'])
     model.eval()
 

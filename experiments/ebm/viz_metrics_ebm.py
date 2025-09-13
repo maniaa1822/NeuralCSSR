@@ -33,7 +33,7 @@ def plot_redundancy(cache_path: Path, out_png: Path, subsample: int = 4000):
     Hs, ss = H[idx], s[idx]
     fr = np.linspace(0.1, 1.0, 12)
     fr, acc, auc = rv.redundancy_auc(Hs, ss, fractions=fr, n_trials=5, C=1.0, seed=0)
-    rv.plot_redundancy_curve(fr, acc, auc, title='EBM redundancy (subsampled)')
+    rv.plot_redundancy_curve(fr, acc, auc, title='Model redundancy (subsampled)')
     plt.savefig(str(out_png), dpi=150)
     plt.close()
 
@@ -67,7 +67,7 @@ def cka_from_layer_caches(cache_paths: List[Path], labels: List[str], out_png: P
 
 
 def main():
-    ap = argparse.ArgumentParser(description='Compute EBM viz metrics from caches')
+    ap = argparse.ArgumentParser(description='Compute model viz metrics from caches')
     ap.add_argument('--out_dir', type=Path, required=True, help='Directory with viz_cache.npz and optional layer caches')
     ap.add_argument('--layers', type=str, default='0,1,final')
     args = ap.parse_args()

@@ -1,0 +1,125 @@
+# Neural CSSR: Golden Mean and Even Process — Findings and Repro Guide
+
+This doc captures the working settings and exact commands to reconstruct epsilon-machines from AR/EBM models, plus notes on stability and next steps.
+
+## scope
+- Backends: neural_js (JS, JS-H) and transcssr
+- Models: AR checkpoints in `experiments/ebm/checkpoints`
+- Data: `.dat` files in `experiments/datasets`
+- Focus: temperature, thresholds, L_max, empirical mixing
+
+## environment
+- Linux, bash; Python via `uv`
+- Ensure torch is available to `uv run` (use `--with torch`)
+
+## data and checkpoints
+- GM data: `experiments/datasets/golden_mean/golden_mean.dat`
+- EP data: `experiments/datasets/even_process/even_process.dat`
+- AR ckpts: `experiments/ebm/checkpoints/golden_mean_ar.pt`, `experiments/ebm/checkpoints/even_process_ar.pt`
+
+## Golden Mean — recommended runs
+1) neural_js, h=1, L_max=3 (2 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/golden_mean/golden_mean.dat \
+  --L_max 3 --context_window 64 \
+  --backend neural_js --state_metric js \
+  --js_threshold 0.02 --min_count 20 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/golden_mean_ar.pt \
+  --temperature 0.1 \
+  --dot_out experiments/results/golden_mean_ar_js_h1_thr002_L3.dot
+```
+2) neural_js, h=1, L_max=6 (stability; 2 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/golden_mean/golden_mean.dat \
+  --L_max 6 --context_window 64 \
+  --backend neural_js --state_metric js \
+  --js_threshold 0.02 --min_count 20 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/golden_mean_ar.pt \
+  --temperature 0.1 \
+  --dot_out experiments/results/golden_mean_ar_js_h1_thr002_L6.dot
+```
+3) transcssr empirical-only baseline (2 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/golden_mean/golden_mean.dat \
+  --L_max 6 --context_window 64 \
+  --backend transcssr --alpha 0.001 \
+  --empirical_only --json_only
+```
+4) transcssr with neural mix at T=0.1 (typically 2 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/golden_mean/golden_mean.dat \
+  --L_max 6 --context_window 64 \
+  --backend transcssr --alpha 0.001 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/golden_mean_ar.pt \
+  --temperature 0.1 --mix_empirical 0.9 --json_only
+```
+
+## Even Process — recommended runs
+1) neural_js, h=1, L_max=3 (often 3 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/even_process/even_process.dat \
+  --L_max 3 --context_window 64 \
+  --backend neural_js --state_metric js \
+  --js_threshold 0.02 --min_count 20 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/even_process_ar.pt \
+  --temperature 0.1 \
+  --dot_out experiments/results/even_process_ar_js_h1_thr002_L3.dot
+```
+2) neural_js, JS-H (h=2), L_max=6 (often 4 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/even_process/even_process.dat \
+  --L_max 6 --context_window 64 \
+  --backend neural_js --state_metric jsh --horizon 2 \
+  --js_threshold 0.015 --min_count 20 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/even_process_ar.pt \
+  --temperature 0.1 \
+  --dot_out experiments/results/even_process_ar_js_h2_thr0015_L6.dot
+```
+3) transcssr empirical-only baseline (2 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/even_process/even_process.dat \
+  --L_max 3 --context_window 64 \
+  --backend transcssr --alpha 0.001 \
+  --empirical_only --json_only
+```
+4) transcssr with neural mix at T=0.1 (typically 4 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/even_process/even_process.dat \
+  --L_max 3 --context_window 64 \
+  --backend transcssr --alpha 0.001 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/even_process_ar.pt \
+  --temperature 0.1 --mix_empirical 0.9 --json_only
+```
+5) transcssr neural-only at T=0.1 (often 6–7 states)
+```bash
+uv run --with torch python -u run_neural_cssr.py \
+  --data experiments/datasets/even_process/even_process.dat \
+  --L_max 3 --context_window 64 \
+  --backend transcssr --alpha 0.001 \
+  --ebm_ar_ckpt experiments/ebm/checkpoints/even_process_ar.pt \
+  --temperature 0.1 --json_only
+```
+
+## key findings
+- Temperature: T=0.1 stabilizes morphs and improves constraint adherence.
+- JS backend suits neural outputs: GM recovers 2 states at L=3 and L=6 with `js_threshold≈0.02`, `min_count≈20`.
+- Even Process is more sensitive: h=1 → ~3 states; h=2 with tight thresholds → ~4; calibration likely needed to reach 2.
+- transcssr + neural counts over-splits unless `mix_empirical` is high (≥0.9); empirical-only gives 2 states.
+
+## guidance
+- Prefer neural_js(h=1) for quick neural-driven machines; lower `js_threshold` as L grows.
+- For EP, try h=2 only if h=1 is unstable; adjust threshold carefully.
+- For transcssr, use `mix_empirical ≥ 0.9` until probabilities are calibrated (Platt/isotonic).
+
+## troubleshooting
+- Exit 127: ensure `uv` and torch are available; activate the venv.
+- DOT export is built-in for neural_js; transcssr prints JSON summary.
+- Flaky state counts: tune `min_count`, `js_threshold`, `temperature`; for transcssr also tune `alpha` and `mix_empirical`.

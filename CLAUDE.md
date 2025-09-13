@@ -142,3 +142,7 @@ This `nanogpt-cssr-pipeline` branch is focused exclusively on the nanoGPT-based 
 - Interactive notebook workflows
 
 For those approaches, see the main branch or other research branches.
+- for training runs give the commands so i can paste them in the terminal and run myself
+- remember this when givin training commands
+- remember this command
+- remember the command for the evenprocess

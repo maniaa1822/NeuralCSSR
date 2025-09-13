@@ -1,0 +1,113 @@
+# Neural CSSR Experiments Log
+
+Date: <fill with run date>
+
+## Scope
+- Validate Neural CSSR against the transCSSR reference using empirical counts.
+- Inject neural probabilities into the reference (unchanged mechanics) and tune to avoid oversplitting.
+- Add diagnostics to compare neural vs empirical probabilities (WMSE, CSV dump).
+
+## Files of Interest
+- Runner (single-file Neural CSSR): `neural_cssr_state_averaging.py`
+- Reference CSSR (unchanged): `transCSSR/transCSSR.py`
+- Neural → transCSSR injector: `transcssr_neural_runner.py`
+
+## Baseline (Empirical parity)
+Golden Mean (empirical, Neural CSSR runner)
+```bash
+uv run python /home/matteo/NeuralCSSR/neural_cssr_state_averaging.py \
+  --data /home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat \
+  --backend empirical --L_max 4 --alpha 0.001 --test_method chi2 \
+  --output_json /home/matteo/NeuralCSSR/neural_cssr_result_gm_empirical.json
+```
+Outcome: 2 states (matches reference Golden Mean).
+
+Even Process (empirical, reference dataset)
+```bash
+uv run python /home/matteo/NeuralCSSR/neural_cssr_state_averaging.py \
+  --data /home/matteo/NeuralCSSR/transCSSR/data/even_process_10k.dat \
+  --backend empirical --L_max 10 --alpha 0.001 --test_method chi2 \
+  --output_json /home/matteo/NeuralCSSR/neural_cssr_result_even_empirical_10k.json
+```
+Outcome: aligned after parity fixes (epsilon mapping, determinization, transient removal, history pruning).
+
+## Neural CSSR (state_averaging.py)
+Golden Mean (neural, tuned)
+```bash
+uv run python /home/matteo/NeuralCSSR/neural_cssr_state_averaging.py \
+  --data /home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat \
+  --model_ckpt /home/matteo/NeuralCSSR/experiments/ebm/checkpoints/golden_mean_ar.pt \
+  --backend neural --L_max 4 --alpha 0.001 --test_method chi2 --device cuda \
+  --pseudo_count_scale 20 --min_count 5 \
+  --output_json /home/matteo/NeuralCSSR/neural_cssr_result_gm_neural_ps20_a1e3.json
+```
+Notes:
+- Capped eff_ext = min(count, pseudo_count_scale) in tests to reduce spurious splits.
+- Using chi2 (alpha=1e-3) and min_count=5 yielded stable 2-state results on GM.
+
+WMSE diagnostic (GM)
+```bash
+uv run python /home/matteo/NeuralCSSR/neural_cssr_state_averaging.py \
+  --data /home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat \
+  --model_ckpt /home/matteo/NeuralCSSR/experiments/ebm/checkpoints/golden_mean_ar.pt \
+  --backend neural --L_max 4 --alpha 0.001 --test_method chi2 --device cuda \
+  --dump_prob_diff /home/matteo/NeuralCSSR/prob_diffs_gm.csv --diff_min_count 5 \
+  --output_json /home/matteo/NeuralCSSR/neural_cssr_result_gm_neural_tuned.json
+```
+Outcome: Weighted MSE (neural vs empirical) ≈ 0.013; small biases can still trigger splits without tuning.
+
+## Neural injection into reference (transcssr_neural_runner.py)
+Defaults set for stable neural results:
+- `pseudo_count_scale=50`, `--cap_marginal_counts` (on), `--mix_empirical=0.3` (Platt optional).
+
+Golden Mean (neural-injected)
+```bash
+uv run python /home/matteo/NeuralCSSR/transcssr_neural_runner.py \
+  --data /home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat \
+  --model_ckpt /home/matteo/NeuralCSSR/experiments/ebm/checkpoints/golden_mean_ar.pt \
+  --backend neural --L_max 4 --alpha 0.001 --test_method chi2 --device cuda \
+  --output_json /home/matteo/NeuralCSSR/transcssr_neural_result_gm_tuned.json
+```
+Outcome: Matches empirical topology with tuned defaults.
+
+Even Process (neural-injected, L=6)
+```bash
+uv run python /home/matteo/NeuralCSSR/transcssr_neural_runner.py \
+  --data /home/matteo/NeuralCSSR/transCSSR/data/even_process_10k.dat \
+  --model_ckpt /home/matteo/NeuralCSSR/experiments/ebm/checkpoints/even_process_ar_long.pt \
+  --backend neural --L_max 6 --alpha 0.001 --test_method chi2 --device cuda \
+  --output_json /home/matteo/NeuralCSSR/transcssr_neural_result_even_l6.json
+```
+Diagnostics (prob diffs + WMSE)
+```bash
+uv run python /home/matteo/NeuralCSSR/transcssr_neural_runner.py \
+  --data /home/matteo/NeuralCSSR/transCSSR/data/even_process_10k.dat \
+  --model_ckpt /home/matteo/NeuralCSSR/experiments/ebm/checkpoints/even_process_ar_long.pt \
+  --backend neural --L_max 6 --alpha 0.001 --test_method chi2 --device cuda \
+  --dump_prob_diff /home/matteo/NeuralCSSR/transcssr_prob_diffs_even_l6.csv \
+  --output_json /home/matteo/NeuralCSSR/transcssr_neural_result_even_l6.json
+```
+
+Empirical (reference parity check)
+```bash
+uv run python /home/matteo/NeuralCSSR/transcssr_neural_runner.py \
+  --data /home/matteo/NeuralCSSR/transCSSR/data/even_process_10k.dat \
+  --backend empirical --L_max 10 --alpha 0.001 --test_method chi2 \
+  --output_json /home/matteo/NeuralCSSR/transcssr_empirical_result_even.json
+``;
+
+## Key Implementation Notes
+- Empirical parity fixes in `neural_cssr_state_averaging.py`:
+  - epsilon-only mapping (prefer longer histories), determinization by conflict split, transient removal (largest SCC), prune histories < L_max−1.
+  - Empirical backend compares raw counts (chi2/G), moves counts on splits, and recomputes morphs from counts.
+- Neural tests cap per-history effective counts and allow chi2 alpha tuning to balance power.
+- transCSSR injector preserves reference mechanics; only replaces future counts via neural probabilities (with optional calibration and mixing).
+
+## Suggested Defaults
+- `test_method=chi2`, `alpha=0.001`.
+- Neural: `pseudo_count_scale∈[20,50]`, `cap_marginal_counts`, `mix_empirical∈[0.2,0.5]`, `platt_fit` optional.
+
+## Next Steps
+- Add optional intermediate-state tracing to pinpoint first divergence vs transCSSR on Even Process.
+- Export DOT from Neural CSSR for visual parity.
+
