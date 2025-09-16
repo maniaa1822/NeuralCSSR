@@ -1,6 +1,5 @@
 ---
-description: EBM training/evaluation workflows and expected metrics for GM/Even
-globs: notebook_experiments/ebt/*.py,notebook_experiments/*/*.dat
+alwaysApply: true
 ---
 # EBM Workflows & Metrics
 

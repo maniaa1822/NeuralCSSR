@@ -1,3 +1,6 @@
+---
+alwaysApply: true
+---
 # EBM Inductive Bias Probe (IBP)
 
 Purpose: Run and interpret inductive-bias probes on the Energy-Based Binary LM (EBM) for Golden Mean and Even Process, while preserving next-token behavior.

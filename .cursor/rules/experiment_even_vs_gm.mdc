@@ -1,3 +1,6 @@
+---
+alwaysApply: false
+---
 title: EBM experiments — Golden Mean vs Even Process (2025-09-10)
 tags: ebm, golden_mean, even_process, parity, evaluation, gpu, amp
 

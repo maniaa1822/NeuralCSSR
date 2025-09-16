@@ -1,3 +1,6 @@
+---
+alwaysApply: false
+---
 # Neural CSSR: Golden Mean and Even Process — Findings and Repro Guide
 
 This doc captures the working settings and exact commands to reconstruct epsilon-machines from AR/EBM models, plus notes on stability and next steps.
