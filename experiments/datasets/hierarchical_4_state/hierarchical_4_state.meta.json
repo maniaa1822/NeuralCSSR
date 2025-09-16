@@ -1,0 +1,33 @@
+{
+  "sequence_length": 50000,
+  "num_states": 4,
+  "alphabet_size": 2,
+  "machine_type": "hierarchical_4_state",
+  "generation_seed": 42,
+  "state_mapping": {
+    "name_to_index": {
+      "inner_a": 0,
+      "inner_b": 1,
+      "outer_a": 2,
+      "outer_b": 3
+    },
+    "index_to_name": {
+      "0": "inner_a",
+      "1": "inner_b",
+      "2": "outer_a",
+      "3": "outer_b"
+    }
+  },
+  "state_index_to_char": {
+    "0": "A",
+    "1": "B",
+    "2": "C",
+    "3": "D"
+  },
+  "files": {
+    "sequence": "hierarchical_4_state.dat",
+    "states": "hierarchical_4_state.states",
+    "states_dat": "hierarchical_4_state.states.dat",
+    "machine": "hierarchical_4_state.machine.json"
+  }
+}

@@ -544,6 +544,95 @@ class SevenStateHumanMachine(StatemachineGenerator):
             # BAA: 3/16 → 0, 13/16 → 1
             return self.send('baa_emits_0') if self.rng.random() < 3/16 else self.send('baa_emits_1')
 
+class HierarchicalStateMachine(StatemachineGenerator):
+    """
+    A UNIFILAR 4-state hierarchical machine designed to test multi-scale pattern learning.
+    Features two-level hierarchy: INNER/OUTER clusters, each with A/B variants.
+
+    UNIFILAR CONSTRAINT: Each (state, symbol) pair has deterministic transitions.
+    Only the emission probabilities are stochastic.
+
+    HIERARCHICAL STRUCTURE:
+    - Level 1 (Meta-clusters): INNER vs OUTER behavioral modes
+    - Level 2 (Sub-states): A/B variants within each cluster
+    - Fast mixing within clusters, slow mixing between clusters
+
+    This design tests AR transformers' ability to learn multi-scale temporal structure
+    without the infinite memory requirements of processes like Even Process.
+
+    Emission patterns (hierarchically organized):
+    INNER_A: 90% → 0, 10% → 1   (strong 0-bias, inner cluster)
+    INNER_B: 80% → 0, 20% → 1   (moderate 0-bias, inner cluster)
+    OUTER_A: 30% → 0, 70% → 1   (moderate 1-bias, outer cluster)
+    OUTER_B: 10% → 0, 90% → 1   (strong 1-bias, outer cluster)
+
+    Transition structure (UNIFILAR with hierarchical mixing):
+    Within-cluster transitions (fast mixing, prob ~0.7):
+    - INNER_A --0--> INNER_B, INNER_A --1--> INNER_A
+    - INNER_B --0--> INNER_A, INNER_B --1--> INNER_B
+    - OUTER_A --0--> OUTER_B, OUTER_A --1--> OUTER_A
+    - OUTER_B --0--> OUTER_A, OUTER_B --1--> OUTER_B
+
+    Between-cluster transitions (slow mixing, prob ~0.3):
+    - Cross-cluster transitions when emitting minority symbol in current cluster
+    """
+    # Define all 4 hierarchical states
+    inner_a = State("INNER_A", initial=True)
+    inner_b = State("INNER_B")
+    outer_a = State("OUTER_A")
+    outer_b = State("OUTER_B")
+
+    # UNIFILAR transitions: deterministic based on emitted symbol
+    # From INNER_A: mostly stays in INNER cluster, 0 → INNER_B, 1 → stay or jump
+    inner_a_emits_0 = inner_a.to(inner_b, on="on_emit_0")      # Fast within-cluster
+    inner_a_emits_1 = inner_a.to(inner_a, on="on_emit_1")      # Self-loop (common for 1s)
+
+    # From INNER_B: 0 → back to INNER_A, 1 → potential cluster jump
+    inner_b_emits_0 = inner_b.to(inner_a, on="on_emit_0")      # Fast within-cluster
+    inner_b_emits_1 = inner_b.to(outer_a, on="on_emit_1")      # Jump to OUTER on minority symbol
+
+    # From OUTER_A: mostly stays in OUTER cluster, 1 → OUTER_B, 0 → stay or jump
+    outer_a_emits_1 = outer_a.to(outer_b, on="on_emit_1")      # Fast within-cluster
+    outer_a_emits_0 = outer_a.to(outer_a, on="on_emit_0")      # Self-loop (common for 0s)
+
+    # From OUTER_B: 1 → back to OUTER_A, 0 → potential cluster jump
+    outer_b_emits_1 = outer_b.to(outer_a, on="on_emit_1")      # Fast within-cluster
+    outer_b_emits_0 = outer_b.to(inner_a, on="on_emit_0")      # Jump to INNER on minority symbol
+
+    def __init__(self, seed: int = None):
+        super().__init__(seed)
+        self.alphabet = ['0', '1']
+        # UNIFILAR: Each (state, symbol) → unique next state
+        # Deterministic routing creates hierarchical mixing dynamics
+        self._transition_info = {
+            "INNER_A|0": [{"to_state": "INNER_B", "probability": 1.0}],
+            "INNER_A|1": [{"to_state": "INNER_A", "probability": 1.0}],
+            "INNER_B|0": [{"to_state": "INNER_A", "probability": 1.0}],
+            "INNER_B|1": [{"to_state": "OUTER_A", "probability": 1.0}],
+            "OUTER_A|0": [{"to_state": "OUTER_A", "probability": 1.0}],
+            "OUTER_A|1": [{"to_state": "OUTER_B", "probability": 1.0}],
+            "OUTER_B|0": [{"to_state": "INNER_A", "probability": 1.0}],
+            "OUTER_B|1": [{"to_state": "OUTER_A", "probability": 1.0}],
+        }
+
+    def on_emit_0(self) -> str: return '0'
+    def on_emit_1(self) -> str: return '1'
+
+    def step(self) -> str:
+        current_state = self.current_state
+        if current_state == self.inner_a:
+            # INNER_A: 90% → 0, 10% → 1 (strong 0-bias, inner cluster)
+            return self.send('inner_a_emits_0') if self.rng.random() < 0.90 else self.send('inner_a_emits_1')
+        elif current_state == self.inner_b:
+            # INNER_B: 80% → 0, 20% → 1 (moderate 0-bias, inner cluster)
+            return self.send('inner_b_emits_0') if self.rng.random() < 0.80 else self.send('inner_b_emits_1')
+        elif current_state == self.outer_a:
+            # OUTER_A: 30% → 0, 70% → 1 (moderate 1-bias, outer cluster)
+            return self.send('outer_a_emits_0') if self.rng.random() < 0.30 else self.send('outer_a_emits_1')
+        else:  # outer_b
+            # OUTER_B: 10% → 0, 90% → 1 (strong 1-bias, outer cluster)
+            return self.send('outer_b_emits_0') if self.rng.random() < 0.10 else self.send('outer_b_emits_1')
+
 
 # --- Core Logic (Unchanged) ---
 
@@ -614,6 +703,7 @@ def create_machine(machine_type: str, seed: int = None) -> StatemachineGenerator
         'distinct_6_state': DistinctSixStateMachine, # <-- NEW 6-STATE MACHINE
         'seven_state_human': SevenStateHumanMachine, # <-- NEW UNIFILAR 7-STATE MACHINE
         'anti_compression': AntiCompressionMachine, # <-- ANTI-COMPRESSION MACHINE
+        'hierarchical_4_state': HierarchicalStateMachine, # <-- HIERARCHICAL 4-STATE MACHINE
     }
     if machine_type not in machine_map:
         raise ValueError(f"Unknown machine type: {machine_type}. Available: {', '.join(machine_map.keys())}")
@@ -623,7 +713,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate machine datasets using python-statemachine.")
     parser.add_argument(
         '--machine', required=True,
-        choices=['biased_coin', 'alternating', 'golden_mean', 'even_process', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'anti_compression'], # <-- ADDED EVEN PROCESS
+        choices=['biased_coin', 'alternating', 'golden_mean', 'even_process', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'anti_compression', 'hierarchical_4_state'], # <-- ADDED HIERARCHICAL
         help="Type of domain-specific machine to generate from."
     )
     parser.add_argument('--length', type=int, default=100000, help="Length of sequence to generate.")
