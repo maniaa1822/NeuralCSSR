@@ -26,6 +26,26 @@ def load_binary_tokens(dat_path: Path) -> List[int]:
     return tokens
 
 
+def load_custom_states(states_path: Path) -> List[int]:
+    """Load precomputed causal states from a .states(.dat) file as integer IDs.
+
+    The file is expected to be a single line/string of state symbols (e.g., 'ABCD...').
+    We map unique symbols to consecutive integers in first-appearance order.
+    """
+    raw = states_path.read_text().strip()
+    # Keep non-whitespace characters as symbols
+    symbols = [c for c in raw if not c.isspace()]
+    mapping: dict[str, int] = {}
+    states: List[int] = []
+    for c in symbols:
+        if c not in mapping:
+            mapping[c] = len(mapping)
+        states.append(mapping[c])
+    if not states:
+        raise ValueError(f"No states found in {states_path}")
+    return states
+
+
 def compute_states_golden_mean(tokens: List[int]) -> List[int]:
     """Golden Mean causal states before emitting tokens[i]:
     - state 0 (A): start or last token was 1 → both 0/1 allowed
@@ -257,6 +277,91 @@ def predict_with_probe_head(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM,
     return np.array(preds, dtype=np.int64)
 
 
+# -------- Layer-specific feature extraction (via forward hooks) --------
+@torch.no_grad()
+def layer_last_hidden_on_positions(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, layer_spec: str, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> torch.Tensor:
+    """Capture last-position hidden states from an intermediate encoder layer.
+    layer_spec: 'final' or integer index into model.encoder.layers
+    Returns (N,C) features corresponding to each position in positions.
+    """
+    if layer_spec == 'final':
+        return last_hidden_on_positions(model, tokens, positions, context_window, pad_id, device, batch_size)
+
+    try:
+        layer_index = int(layer_spec)
+        hook_module = model.encoder.layers[layer_index]
+    except Exception as e:
+        raise ValueError(f"Invalid --probe_layer '{layer_spec}': {e}")
+
+    feats: list[torch.Tensor] = []
+    model.eval()
+    d_model = model.d_model
+
+    captured: dict[str, torch.Tensor] = {}
+
+    def hook_fn(_module, _inp, out):
+        captured['h'] = out.detach()
+
+    handle = hook_module.register_forward_hook(hook_fn)
+    try:
+        for s in range(0, len(positions), batch_size):
+            idx = positions[s:s + batch_size]
+            x_ids, attn = batch_from_indices(tokens, idx, context_window, pad_id, device)
+            x = model.token_embedding(x_ids) * math.sqrt(d_model)
+            x = x.transpose(0, 1)
+            x = model.positional_encoding(x)
+            x = x.transpose(0, 1)
+            x = model.dropout(x)
+            L = x.size(1)
+            causal_mask = torch.triu(torch.ones(L, L, device=device), diagonal=1).bool()
+            padding_mask = (attn == 0)
+            _ = model.encoder(x, mask=causal_mask, src_key_padding_mask=padding_mask)  # trigger hook
+            if 'h' not in captured:
+                raise RuntimeError('Layer hook did not capture output')
+            h = captured['h']  # (B,L,C)
+            last_idx = attn.sum(dim=1) - 1
+            b_idx = torch.arange(h.size(0), device=device)
+            hl = h[b_idx, last_idx]
+            feats.append(hl.cpu())
+    finally:
+        handle.remove()
+
+    return torch.cat(feats, dim=0)
+
+
+def train_probe_head_from_layer(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, layer_spec: str, tokens: np.ndarray, positions: np.ndarray, labels: np.ndarray, context_window: int, pad_id: int, device: torch.device, steps: int, lr: float, batch_size: int, seed: int) -> torch.nn.Module:
+    torch.manual_seed(seed)
+    rng = np.random.default_rng(seed)
+    head = torch.nn.Linear(model.d_model, 2).to(device)
+    opt = torch.optim.Adam(head.parameters(), lr=lr)
+    N = len(positions)
+    for t in range(steps):
+        sel = rng.choice(N, size=min(batch_size, N), replace=(N < batch_size))
+        idx = positions[sel]
+        yb = torch.from_numpy(labels[sel].astype(np.int64)).to(device)
+        H = layer_last_hidden_on_positions(model, layer_spec, tokens, idx, context_window, pad_id, device, batch_size=len(idx))
+        logits = head(H.to(device))
+        loss = F.cross_entropy(logits, yb)
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        opt.step()
+    head.eval()
+    return head
+
+
+@torch.no_grad()
+def predict_with_probe_head_from_layer(model: EnergyBasedBinaryLM | AutoRegressiveBinaryLM, head: torch.nn.Module, layer_spec: str, tokens: np.ndarray, positions: np.ndarray, context_window: int, pad_id: int, device: torch.device, batch_size: int = 256) -> np.ndarray:
+    preds: List[int] = []
+    model.eval(); head.eval()
+    for s in range(0, len(positions), batch_size):
+        idx = positions[s:s + batch_size]
+        H = layer_last_hidden_on_positions(model, layer_spec, tokens, idx, context_window, pad_id, device, batch_size=len(idx))
+        logits = head(H.to(device))
+        p = torch.argmax(logits, dim=1).cpu().numpy().astype(np.int64)
+        preds.extend(p.tolist())
+    return np.array(preds, dtype=np.int64)
+
+
 def compute_task_labels(
     task: str,
     preset: str,
@@ -408,6 +513,8 @@ def main():
     ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'custom'], default='golden_mean')
     ap.add_argument('--data', type=Path, default=None, help='Path to .dat file (required if preset=custom)')
     ap.add_argument('--val_data', type=Path, default=None, help='Optional separate validation .dat')
+    ap.add_argument('--states_data', type=Path, default=None, help='Optional .states or .states.dat file with precomputed train states for preset=custom')
+    ap.add_argument('--val_states_data', type=Path, default=None, help='Optional .states or .states.dat file with precomputed val states for preset=custom')
     ap.add_argument('--device', type=str, default='auto')
     ap.add_argument('--context_window', type=int, default=None)
     ap.add_argument('--pad_id', type=int, default=2)
@@ -426,6 +533,7 @@ def main():
     ap.add_argument('--ft_lr', type=float, default=1e-3)
     ap.add_argument('--ft_batch_size', type=int, default=64)
     ap.add_argument('--use_probe_head', action='store_true', help='Train a separate linear probe on last hidden states; preserve LM head')
+    ap.add_argument('--probe_layer', type=str, default='final', help="Layer to probe from: 'final' or integer index like '0'")
     ap.add_argument('--tasks', type=str, default='', help='Comma-separated custom tasks: even_state->1, even_state->0, p1_gt_0.5, length_even, last3_sum_odd')
 
     # Eval batch
@@ -470,13 +578,28 @@ def main():
         tokens_val = tokens_tr
     print(f"[Data] val tokens: {len(tokens_val)} from {args.val_data or args.data}")
 
-    # Compute states before each token
+    # Compute or load states before each token
     if args.preset == 'even_process':
         states_tr_all = np.array(compute_states_even_process(tokens_tr.tolist()), dtype=np.int64)
         states_val_all = np.array(compute_states_even_process(tokens_val.tolist()), dtype=np.int64)
-    else:
+    elif args.preset == 'golden_mean':
         states_tr_all = np.array(compute_states_golden_mean(tokens_tr.tolist()), dtype=np.int64)
         states_val_all = np.array(compute_states_golden_mean(tokens_val.tolist()), dtype=np.int64)
+    else:
+        # custom: prefer provided .states file; fallback to GM heuristic
+        if args.states_data is not None and args.states_data.exists():
+            states_tr_all = np.array(load_custom_states(args.states_data), dtype=np.int64)
+            if len(states_tr_all) != len(tokens_tr):
+                raise ValueError(f"Length mismatch: states ({len(states_tr_all)}) vs tokens ({len(tokens_tr)}) in train")
+        else:
+            print('[warn] No --states_data provided for custom preset; defaulting to golden-mean heuristic states')
+            states_tr_all = np.array(compute_states_golden_mean(tokens_tr.tolist()), dtype=np.int64)
+        if args.val_states_data is not None and args.val_states_data.exists():
+            states_val_all = np.array(load_custom_states(args.val_states_data), dtype=np.int64)
+            if len(states_val_all) != len(tokens_val):
+                raise ValueError(f"Length mismatch: val states ({len(states_val_all)}) vs tokens ({len(tokens_val)})")
+        else:
+            states_val_all = np.array(compute_states_golden_mean(tokens_val.tolist()), dtype=np.int64)
 
     # Positions available (skip position 0 to avoid empty history)
     pos_tr_all = np.arange(1, len(tokens_tr), dtype=np.int64)
@@ -569,12 +692,18 @@ def main():
             print(f"  nt_pre: ce={nt_pre['val_ce']:.4f} acc={nt_pre['val_acc']:.4f}")
 
         if args.use_probe_head:
-            # Train separate probe head on base model's last hidden states
+            # Train separate probe head on selected layer's hidden states
             model_k, _ = build_model_from_ckpt(args.ckpt, device, context_window)
-            probe_head = train_probe_head(
-                model_k, tokens_tr, sel_tr, y_tr, context_window, args.pad_id, device,
-                steps=args.ft_steps, lr=args.ft_lr, batch_size=args.ft_batch_size, seed=args.seed * 1000 + k
-            )
+            if args.probe_layer == 'final':
+                probe_head = train_probe_head(
+                    model_k, tokens_tr, sel_tr, y_tr, context_window, args.pad_id, device,
+                    steps=args.ft_steps, lr=args.ft_lr, batch_size=args.ft_batch_size, seed=args.seed * 1000 + k
+                )
+            else:
+                probe_head = train_probe_head_from_layer(
+                    model_k, args.probe_layer, tokens_tr, sel_tr, y_tr, context_window, args.pad_id, device,
+                    steps=args.ft_steps, lr=args.ft_lr, batch_size=args.ft_batch_size, seed=args.seed * 1000 + k
+                )
         else:
             # Fine-tune LM (head/full)
             model_k = finetune_on_task(
@@ -595,9 +724,14 @@ def main():
 
         # Predict on fixed validation set
         if args.use_probe_head:
-            preds_val = predict_with_probe_head(
-                model_k, probe_head, tokens_val, pos_val, context_window, args.pad_id, device, batch_size=args.eval_batch_size
-            )
+            if args.probe_layer == 'final':
+                preds_val = predict_with_probe_head(
+                    model_k, probe_head, tokens_val, pos_val, context_window, args.pad_id, device, batch_size=args.eval_batch_size
+                )
+            else:
+                preds_val = predict_with_probe_head_from_layer(
+                    model_k, probe_head, args.probe_layer, tokens_val, pos_val, context_window, args.pad_id, device, batch_size=args.eval_batch_size
+                )
         else:
             preds_val = predict_on_positions(
                 model_k, tokens_val, pos_val, context_window, args.pad_id, device, batch_size=args.eval_batch_size

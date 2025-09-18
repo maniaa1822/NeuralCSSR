@@ -42,7 +42,8 @@ class AutoRegressiveBinaryLM(nn.Module):
         self.vocab_size = vocab_size
         self.output_vocab_size = output_vocab_size
 
-        self.token_embedding = nn.Embedding(vocab_size, d_model)
+        # Use PAD id = 2 for variable-context padding (ignored by embedding updates)
+        self.token_embedding = nn.Embedding(vocab_size, d_model, padding_idx=2)
         self.positional_encoding = PositionalEncoding(d_model, max_len)
 
         encoder_layer = nn.TransformerEncoderLayer(
@@ -73,6 +74,10 @@ class AutoRegressiveBinaryLM(nn.Module):
                     nn.init.zeros_(module.bias)
             elif isinstance(module, nn.Embedding):
                 nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                # Ensure padding row stays zeros
+                if getattr(module, 'padding_idx', None) is not None and module.padding_idx >= 0:
+                    with torch.no_grad():
+                        module.weight[module.padding_idx].zero_()
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         batch_size, seq_len = input_ids.shape
@@ -128,7 +133,8 @@ class EnergyBasedBinaryLM(nn.Module):
         self.vocab_size = vocab_size
         self.output_vocab_size = output_vocab_size
 
-        self.token_embedding = nn.Embedding(vocab_size, d_model)
+        # Use PAD id = 2 for variable-context padding (ignored by embedding updates)
+        self.token_embedding = nn.Embedding(vocab_size, d_model, padding_idx=2)
         self.positional_encoding = PositionalEncoding(d_model, max_len)
 
         encoder_layer = nn.TransformerEncoderLayer(
@@ -159,6 +165,10 @@ class EnergyBasedBinaryLM(nn.Module):
                     nn.init.zeros_(module.bias)
             elif isinstance(module, nn.Embedding):
                 nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                # Ensure padding row stays zeros
+                if getattr(module, 'padding_idx', None) is not None and module.padding_idx >= 0:
+                    with torch.no_grad():
+                        module.weight[module.padding_idx].zero_()
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         batch_size, seq_len = input_ids.shape

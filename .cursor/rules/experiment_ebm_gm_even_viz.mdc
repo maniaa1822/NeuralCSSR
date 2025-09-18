@@ -1,5 +1,6 @@
 ---
-alwaysApply: true
+description: This log captures commands and results for training our Energy-Based Binary LM (EBM) on Golden Mean and Even Process, evaluating next-token metrics, generating representation visualizations, computing redundancy and CKA
+alwaysApply: false
 ---
 title: EBM — Golden Mean & Even Process: Training, Eval, and Visualization (2025-09-11)
 tags: ebm, golden_mean, even_process, visualization, cka, redundancy, metrics

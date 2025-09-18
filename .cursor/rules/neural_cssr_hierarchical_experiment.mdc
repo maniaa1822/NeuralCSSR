@@ -1,4 +1,5 @@
 ---
+description: this rule is useful to replicate the pipeline of generating a dataset, training a model, and using it in cssr 
 alwaysApply: false
 ---
 # Neural CSSR Hierarchical Machine Experiment
@@ -127,6 +128,28 @@ uv run python transcssr_neural_runner.py \
   --output_json transcssr_hierarchical_empirical_10k_independent.json
 ```
 
+**Neural CSSR with early-layer head (L=5, no mixing):**
+```bash
+uv run --with torch python3 transcssr_neural_runner.py \
+  --data experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat \
+  --model_ckpt experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt \
+  --backend neural --L_max 5 --alpha 0.001 --test_method chi2 --device auto \
+  --probe_layer 0 --head_ckpt experiments/ebm/checkpoints/h4_layer0_head.pt \
+  --platt_json experiments/ebm/checkpoints/h4_layer0_head_platt.json \
+  --pseudo_count_scale 50 --cap_marginal_counts --mix_empirical 0 \
+  --output_json experiments/results/cssr_h4_neural_layer0_L5.json
+```
+
+**Neural CSSR with final head (baseline, L=5, no mixing, ps=50):**
+```bash
+uv run --with torch python3 transcssr_neural_runner.py \
+  --data experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat \
+  --model_ckpt experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt \
+  --backend neural --L_max 5 --alpha 0.001 --test_method chi2 --device auto \
+  --pseudo_count_scale 50 --cap_marginal_counts --mix_empirical 0 \
+  --output_json experiments/results/cssr_h4_neural_final_L5.json
+```
+
 ## Key Results
 
 ### 1. Neural Stability vs Empirical Variance
@@ -143,20 +166,42 @@ uv run python transcssr_neural_runner.py \
 
 **Key Insight**: Neural probabilities remain identical regardless of dataset size, while empirical probabilities fluctuate due to sampling variance.
 
-### 2. CSSR Structure Recovery
+### 2. CSSR Structure Recovery (updated, L=5, no mixing)
 
-**State Count Comparison** (10k dataset):
-- **Expected**: 4 states (ground truth)
-- **Empirical CSSR**: 8 states (100% over-split)
-- **Neural CSSR**: 6 states (50% over-split) ✅ **Much closer**
+- 50k dataset:
+  - Final head (ps=50): 6 states.
+  - Layer-0 head:
+    - ps=30: 1 state.
+    - ps=50–70: 2 states.
+  - Empirical: 23 states (over-splitting).
 
-**Structure Quality**:
+- 10k independent dataset:
+  - Final head (ps=50): 6 states.
+  - Layer-0 head (ps=50): 2 states.
+  - Empirical: 17 states.
 
-| Method | States | Histories/State | P(1) Range | Quality |
-|--------|--------|-----------------|------------|---------|
-| Expected | 4 | - | [0.1, 0.2, 0.7, 0.9] | Perfect |
-| Empirical | 8 | 1-2 (fragmented) | [0.182-0.854] | Over-split |
-| Neural | 6 | 2-12 (grouped) | [0.236-0.801] | Better grouping |
+Notes:
+- No empirical mixing is used in these runs (`--mix_empirical 0`). At L=5, the early-layer head is sensitive to `pseudo_count_scale` without mixing and tends to over-merge; consider adjusting `alpha` (e.g., 0.003–0.01) or using L=3–4 to recover 4–5 states without mixing.
+
+**Structure Quality** (illustrative, 50k L=5):
+
+| Method | States | Example P(1) levels | Read |
+|--------|--------|----------------------|------|
+| Expected | 4 | 0.10, 0.20, 0.70, 0.90 | Ground truth |
+| Empirical | 23 | varied | Over-splitting |
+| Neural (final, ps=50) | 6 | 0.20, 0.24, 0.52, 0.71–0.76, 0.80 | Slight high-tier duplicates |
+| Neural (layer-0, ps=50–70) | 2 | ~0.36, ~0.71 | Over-merge at L=5 without mixing |
+
+### Closeness to Ground Truth
+
+- **Ground truth**: 4 states with P(1) ≈ {0.10, 0.20, 0.70, 0.90}.
+- **Current no-mix L=5 results**:
+  - Final head (ps=50): 6 states — slight over-splitting; duplicates near the high tier (~0.8); ~0.90 tier not clearly isolated.
+  - Layer-0 head (ps=30→70): 1–2 states — over-merged under these strict settings at L=5.
+  - Empirical: 17–23 states — heavy over-splitting.
+- **Reference**: Prior empirical 8-state result was with L=3 (closer in count than L=5 but still over-split).
+- **Guidance (no mixing)**: To approach 4–5 states without empirical mixing at L=5, increase `alpha` (≈0.003–0.01) and/or adjust `pseudo_count_scale` (≈30–40). Alternatively, use L=3–4 for more stable separation of INNER/OUTER without over-merge.
+- Note: With mixing enabled (not used here), the layer-0 head recovered 5 states and clearer INNER/OUTER tiers.
 
 **Neural CSSR Advantages**:
 - ✅ **Less over-splitting**: 6 vs 8 states
@@ -244,6 +289,14 @@ uv run python transcssr_neural_runner.py \
   --data experiments/datasets/hierarchical_4_state_10k/hierarchical_4_state/hierarchical_4_state.dat \
   --backend empirical --L_max 3 --alpha 0.001 --test_method chi2 \
   --output_json transcssr_hierarchical_empirical.json
+```
+4.5 **Structure comparison**:
+```bash
+# Empirical CSSR baseline L = 5
+uv run python transcssr_neural_runner.py \
+  --data experiments/datasets/hierarchical_4_state_10k/hierarchical_4_state/hierarchical_4_state.dat \
+  --backend empirical --L_max 5 --alpha 0.001 --test_method chi2 \
+  --output_json transcssr_hierarchical_empirical_L5.json
 ```
 
 5. **Analysis and visualization**: Use provided Python scripts to generate comparison plots

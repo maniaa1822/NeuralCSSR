@@ -39,6 +39,34 @@ def make_batches(tokens: List[int], block_size: int, batch_size: int, device: to
     return x, attn, y
 
 
+def make_variable_batches(tokens: List[int], min_context: int, max_context: int, batch_size: int, device: torch.device):
+    """Create variable-length context batches with PAD=2 and proper attention mask.
+
+    Returns x [B, max_context], attn [B, max_context] (1 valid, 0 pad), y [B]
+    """
+    PAD_ID = 2
+    xs = []
+    ys = []
+    atts = []
+    N = len(tokens)
+    for _ in range(batch_size):
+        L = int(torch.randint(min_context, max_context + 1, (1,)).item())
+        hi = max(1, N - L - 1)
+        s = int(torch.randint(0, hi, (1,)).item())
+        seq = tokens[s:s + L]
+        target = tokens[s + L]
+        pad_len = max_context - L
+        x_row = ([PAD_ID] * pad_len) + seq
+        att_row = ([0] * pad_len) + ([1] * L)
+        xs.append(x_row)
+        ys.append(target)
+        atts.append(att_row)
+    x = torch.tensor(xs, dtype=torch.long, device=device)
+    attn = torch.tensor(atts, dtype=torch.long, device=device)
+    y = torch.tensor(ys, dtype=torch.long, device=device)
+    return x, attn, y
+
+
 @torch.no_grad()
 def estimate_conditional_probs(model: AutoRegressiveBinaryLM, tokens: List[int], device: torch.device, context_window: int):
     def p_next(last_bit: int) -> float:
@@ -138,8 +166,8 @@ def parity_metrics(model: AutoRegressiveBinaryLM, tokens: List[int], device: tor
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Train AR Transformer on binary datasets (Golden Mean, Even Process)")
-    ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'custom'], default='golden_mean')
+    ap = argparse.ArgumentParser(description="Train AR Transformer on binary datasets (Golden Mean, Even Process, Seven-State Human)")
+    ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'seven_state_human', 'custom'], default='golden_mean')
     ap.add_argument('--data', type=Path, default=None)
     ap.add_argument('--device', type=str, default='auto')
     ap.add_argument('--context_window', type=int, default=64)
@@ -161,6 +189,9 @@ def main():
     ap.add_argument('--tf32', action='store_true', help='Enable TF32 matmul on Ampere+ GPUs')
     # Subset control
     ap.add_argument('--max_tokens', type=int, default=0, help='If >0, train/val on the first N tokens')
+    # Variable-context training
+    ap.add_argument('--var_context', action='store_true', help='Enable variable-length context training')
+    ap.add_argument('--min_context', type=int, default=2, help='Minimum context length when --var_context is enabled')
     args = ap.parse_args()
 
     # Resolve preset defaults
@@ -172,6 +203,10 @@ def main():
         default_data = Path('/home/matteo/NeuralCSSR/experiments/datasets/even_process/even_process.dat')
         default_ckpt = Path('/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/even_process_ar.pt')
         default_csv = Path('/home/matteo/NeuralCSSR/experiments/ebm/metrics/even_process_ar_metrics.csv')
+    elif args.preset == 'seven_state_human':
+        default_data = Path('/home/matteo/NeuralCSSR/experiments/datasets/seven_state_human/seven_state_human.dat')
+        default_ckpt = Path('/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/seven_state_human_ar.pt')
+        default_csv = Path('/home/matteo/NeuralCSSR/experiments/ebm/metrics/seven_state_human_ar_metrics.csv')
     else:
         default_data = None; default_ckpt = None; default_csv = None
 
@@ -223,12 +258,20 @@ def main():
     for epoch in range(1, args.epochs + 1):
         running = 0.0
         for step in range(1, args.steps_per_epoch + 1):
-            x, attn, y = make_batches(train_tokens, args.context_window, args.batch_size, device)
+            if args.var_context:
+                x, attn, y = make_variable_batches(train_tokens, args.min_context, args.context_window, args.batch_size, device)
+            else:
+                x, attn, y = make_batches(train_tokens, args.context_window, args.batch_size, device)
             opt.zero_grad(set_to_none=True)
             if device.type == 'cuda' and args.amp:
                 with torch.amp.autocast('cuda', enabled=True):
                     logits = model(x, attn)
-                    last_logits = logits[:, -1]
+                    if args.var_context:
+                        last_idx = attn.sum(dim=1) - 1
+                        batch_idx = torch.arange(logits.size(0), device=device)
+                        last_logits = logits[batch_idx, last_idx]
+                    else:
+                        last_logits = logits[:, -1]
                     loss = F.cross_entropy(last_logits, y)
                 scaler.scale(loss).backward()
                 scaler.unscale_(opt)
@@ -237,7 +280,12 @@ def main():
                 scaler.update()
             else:
                 logits = model(x, attn)
-                last_logits = logits[:, -1]
+                if args.var_context:
+                    last_idx = attn.sum(dim=1) - 1
+                    batch_idx = torch.arange(logits.size(0), device=device)
+                    last_logits = logits[batch_idx, last_idx]
+                else:
+                    last_logits = logits[:, -1]
                 loss = F.cross_entropy(last_logits, y)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

@@ -1,0 +1,123 @@
+---
+alwaysApply: false
+---
+title: Plan — NeuralCSSR with Layer-0 Head on Hierarchical 4-State (2025-09-16)
+tags: neural_cssr, hierarchical_4_state, layer_probe, early_layer_head, calibration, diagnostics
+
+## Goal
+Demonstrate that using an early-layer (layer 0) next-token head to provide probabilities to CSSR yields more faithful causal-state recovery than the final-layer head or empirical counts.
+
+## Prereqs
+- Checkpoint: `experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt`
+- Data: `experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat`
+- States: `experiments/datasets/hierarchical_4_state/hierarchical_4_state.states.dat`
+- Tools available: `uv`, torch, matplotlib, scikit-learn
+
+## High-level steps
+1) Implement a layer-0 head module that outputs next-token logits from encoder layer 0 (backbone frozen).
+2) Train the head with CE on next-token prediction; optionally calibrate (Platt or isotonic) on a held-out split.
+3) Extend CSSR runner to consume head probabilities instead of final head: add flags and integrate the provider.
+4) Run CSSR with neural probabilities from layer 0; compare to final-head NeuralCSSR and empirical.
+5) Evaluate with diagnostics (state counts, mapping to P(1) levels, transition structure, D-IB partition test).
+
+## Implementation details
+
+### 1) Early-layer head wrapper
+- File: `experiments/ebm/layer0_head.py` (new)
+- Wrapper class `NonlinearEarlyLayerHead(model, layer_index=0, d_model)`:
+  - Registers a forward hook on `model.encoder.layers[layer_index]` to capture `(B,L,C)` features.
+  - Applies a small non-linear MLP head (Linear→SiLU→Dropout→Linear) on last-position features to produce logits `(B,2)`.
+  - Provides `forward(x_ids, attn)` and `generate_probabilities(...)` mirroring the model API used by the CSSR runner.
+- Save/load utilities: save only head state_dict; recreate wrapper by passing base model and loading head weights.
+
+### 2) Train the head (backbone frozen)
+- Script: `experiments/ibp/train_layer_head.py` (new or reuse patterns from `ebm_ibp.py`).
+- Procedure:
+  - Freeze all backbone params; train only the non-linear head.
+  - Data: same `.dat`; loss: CE on next-token; batch by sampled positions; context_window from ckpt.
+  - Early stopping on val CE; save `experiments/ebm/checkpoints/h4_layer0_head.pt`.
+- Command:
+```bash
+uv run --with numpy --with torch \
+  python3 experiments/ibp/train_layer_head.py \
+  --ckpt experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt \
+  --data experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat \
+  --probe_layer 0 --steps 2000 --lr 1e-3 --batch_size 256 \
+  --out experiments/ebm/checkpoints/h4_layer0_head.pt
+```
+
+### 3) Optional calibration (recommended)
+- Script: `experiments/ibp/calibrate_head.py` (new).
+- Split dataset; fit Platt scaling (logistic) or isotonic on predicted p(1) vs targets; save calibrator params.
+- Output: `experiments/ebm/checkpoints/h4_layer0_head_platt.json` (or isotonic.pkl).
+
+### 4) Extend CSSR runner to use layer-0 head
+- File to edit: `transcssr_neural_runner.py` (or the active CSSR runner).
+- Add flags:
+  - `--probe_layer {final|int}` (default: final)
+  - `--head_ckpt PATH` (optional; if provided and probe_layer != final, load the trained head)
+  - `--platt_json PATH` (optional calibrator)
+- Provider logic:
+  - If `probe_layer==final` and `head_ckpt` is None → existing path (final model head).
+  - Else → wrap base model with `NonlinearEarlyLayerHead` and load `head_ckpt`; during scoring, apply calibrator if provided.
+
+### 5) Run CSSR experiments (hierarchical dataset)
+- Shared settings (from prior neural CSSR tuning): `chi2`, `alpha=1e-3`, `pseudo_count_scale∈[20,50]`, `cap_marginal_counts`, `L_max 3–5`. `mix_empirical` is optional; we use 0.0 here.
+
+Layer-0 head NeuralCSSR (no mixing):
+```bash
+uv run --with torch python3 transcssr_neural_runner.py \
+  --data experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat \
+  --model_ckpt experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt \
+  --backend neural --L_max 5 --alpha 0.001 --test_method chi2 --device auto \
+  --probe_layer 0 --head_ckpt experiments/ebm/checkpoints/h4_layer0_head.pt \
+  --platt_json experiments/ebm/checkpoints/h4_layer0_head_platt.json \
+  --pseudo_count_scale 30 --cap_marginal_counts \
+  --output_json experiments/results/cssr_h4_neural_layer0_L5.json
+```
+
+Final-head NeuralCSSR (baseline, no mixing):
+```bash
+uv run --with torch python3 transcssr_neural_runner.py \
+  --data experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat \
+  --model_ckpt experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt \
+  --backend neural --L_max 5 --alpha 0.001 --test_method chi2 --device auto \
+  --mix_empirical 0 \
+  --output_json experiments/results/cssr_h4_neural_final_L5.json
+```
+
+Empirical baseline:
+```bash
+uv run python3 transcssr_neural_runner.py \
+  --data experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat \
+  --backend empirical --L_max 5 --alpha 0.001 --test_method chi2 \
+  --output_json experiments/results/cssr_h4_empirical_L5.json
+```
+
+## Diagnostics & analysis
+- State count vs ground truth (expect 4 ± 1). Layer-0 head should reduce merges compared to final-head and reduce over-splits compared to empirical.
+- Map recovered states by mean P(1) to {~0.1, ~0.2, ~0.7, ~0.9}; duplicates within INNER/OUTER indicate residual over-splitting.
+- Transition structure: unifilar-like within-cluster fast mixing; fewer spurious transitions.
+- Paper-aligned diagnostic (optional): compute D-IB on next-token partition (D-IB_{q=} vs D-IB_{q≠}) to confirm less collapse with layer-0 head.
+- Stability: vary `L_max` (3–5) and `alpha` around 1e-3; layer-0 should be more stable.
+
+### Findings (2025-09-16)
+- With `--mix_empirical` removed (0.0):
+  - Layer-0 head: 5 states. P(1) levels ~ [0.209, 0.240, 0.333, 0.396, 0.716]. Less collapse; two low and two mid tiers indicate mild over-splitting.
+  - Final head: 5 states. Heavy collapse near high tier ~0.79 with duplicates; one mid (~0.53) and one low (~0.26). Reflects next-bit collapse at final layer.
+  - Empirical: 10 states. Clear over-splitting.
+- Interpretation: Early-layer head improves fidelity vs final-head and reduces over-splitting vs empirical. For fewer duplicates, increase `--pseudo_count_scale` (e.g., 40–50) and test `L_max` ∈ {3,4,5}. Keep Platt calibration; mixing can remain off.
+
+## Success criteria
+- More faithful 4-state recovery with layer-0 head than final-head NeuralCSSR and empirical CSSR.
+- Lower variance across runs/L_max; fewer within-cluster duplicates; improved distinguish-state behavior (higher D-IB-like behavior in recovered machine).
+
+## Rollback/alternatives
+- If layer 0 is noisy, try averaging features from layers 0–1 for the head.
+- If calibration hurts, disable and rely on CSSR `mix_empirical`.
+- If CSSR still over-splits, increase `pseudo_count_scale` and/or `mix_empirical`.
+
+## Pointers
+- Prior experiment doc: `.cursor/rules/experiment_hierarchical_4_state_layer_probes.mdc`
+- Inductive bias framework: `experiments/ibp/paper.md`
+

@@ -39,6 +39,36 @@ def make_batches(tokens: List[int], block_size: int, batch_size: int, device: to
     return x, attn, y
 
 
+def make_variable_batches(tokens: List[int], min_context: int, max_context: int, batch_size: int, device: torch.device):
+    """Create variable-length context batches, left-padded with PAD and proper attention masks.
+
+    Returns x [B, max_context], attn [B, max_context] (1 for valid, 0 for PAD), y [B]
+    """
+    PAD_ID = 2  # vocab_size=3 → use 2 as PAD consistently
+    B = batch_size
+    xs = []
+    ys = []
+    atts = []
+    N = len(tokens)
+    for _ in range(B):
+        L = int(torch.randint(min_context, max_context + 1, (1,)).item())
+        # ensure space for target
+        hi = max(1, N - L - 1)
+        s = int(torch.randint(0, hi, (1,)).item())
+        seq = tokens[s:s + L]
+        target = tokens[s + L]
+        pad = [PAD_ID] * (max_context - L)
+        x_row = pad + seq
+        att_row = [0] * (max_context - L) + [1] * L
+        xs.append(x_row)
+        ys.append(target)
+        atts.append(att_row)
+    x = torch.tensor(xs, dtype=torch.long, device=device)
+    attn = torch.tensor(atts, dtype=torch.long, device=device)
+    y = torch.tensor(ys, dtype=torch.long, device=device)
+    return x, attn, y
+
+
 @torch.no_grad()
 def estimate_conditional_probs(model: EnergyBasedBinaryLM, tokens: List[int], device: torch.device, context_window: int):
     def p_next(last_bit: int) -> float:
@@ -138,8 +168,8 @@ def parity_metrics(model: EnergyBasedBinaryLM, tokens: List[int], device: torch.
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Train EBM on binary datasets (Golden Mean, Even Process)")
-    ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'custom'], default='golden_mean')
+    ap = argparse.ArgumentParser(description="Train EBM on binary datasets (Golden Mean, Even Process, 7-State Human)")
+    ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'seven_state_human', 'custom'], default='golden_mean')
     ap.add_argument('--data', type=Path, default=None)
     ap.add_argument('--device', type=str, default='auto')
     ap.add_argument('--context_window', type=int, default=64)
@@ -156,6 +186,9 @@ def main():
     ap.add_argument('--val_frac', type=float, default=0.1)
     ap.add_argument('--val_steps', type=int, default=200)
     ap.add_argument('--log_csv', type=Path, default=None)
+    # Variable-context training
+    ap.add_argument('--var_context', action='store_true', help='Enable variable-length context training')
+    ap.add_argument('--min_context', type=int, default=2, help='Minimum context length when --var_context is enabled')
     # GPU / precision
     ap.add_argument('--amp', action='store_true', help='Enable CUDA AMP mixed precision')
     ap.add_argument('--tf32', action='store_true', help='Enable TF32 matmul on Ampere+ GPUs')
@@ -172,6 +205,10 @@ def main():
         default_data = Path('/home/matteo/NeuralCSSR/experiments/datasets/even_process/even_process.dat')
         default_ckpt = Path('/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/even_process_ebm.pt')
         default_csv = Path('/home/matteo/NeuralCSSR/experiments/ebm/metrics/even_process_metrics.csv')
+    elif args.preset == 'seven_state_human':
+        default_data = Path('/home/matteo/NeuralCSSR/experiments/datasets/seven_state_human/seven_state_human.dat')
+        default_ckpt = Path('/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/seven_state_human_ebm.pt')
+        default_csv = Path('/home/matteo/NeuralCSSR/experiments/ebm/metrics/seven_state_human_metrics.csv')
     else:
         default_data = None; default_ckpt = None; default_csv = None
 
@@ -223,12 +260,20 @@ def main():
     for epoch in range(1, args.epochs + 1):
         running = 0.0
         for step in range(1, args.steps_per_epoch + 1):
-            x, attn, y = make_batches(train_tokens, args.context_window, args.batch_size, device)
+            if args.var_context:
+                x, attn, y = make_variable_batches(train_tokens, args.min_context, args.context_window, args.batch_size, device)
+            else:
+                x, attn, y = make_batches(train_tokens, args.context_window, args.batch_size, device)
             opt.zero_grad(set_to_none=True)
             if device.type == 'cuda' and args.amp:
                 with torch.amp.autocast('cuda', enabled=True):
                     scores = model(x, attn)
-                    logits = scores[:, -1]
+                    if args.var_context:
+                        last_idx = attn.sum(dim=1) - 1
+                        batch_idx = torch.arange(scores.size(0), device=device)
+                        logits = scores[batch_idx, last_idx]
+                    else:
+                        logits = scores[:, -1]
                     loss = F.cross_entropy(logits, y)
                 scaler.scale(loss).backward()
                 scaler.unscale_(opt)
@@ -237,7 +282,12 @@ def main():
                 scaler.update()
             else:
                 scores = model(x, attn)
-                logits = scores[:, -1]
+                if args.var_context:
+                    last_idx = attn.sum(dim=1) - 1
+                    batch_idx = torch.arange(scores.size(0), device=device)
+                    logits = scores[batch_idx, last_idx]
+                else:
+                    logits = scores[:, -1]
                 loss = F.cross_entropy(logits, y)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

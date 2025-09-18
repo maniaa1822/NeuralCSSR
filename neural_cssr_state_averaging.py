@@ -85,10 +85,10 @@ def load_model_from_ckpt(ckpt_path: Path, device: torch.device):
             sys.path.insert(0, str(ebm_dir))
         from models import EnergyBasedBinaryLM, AutoRegressiveBinaryLM  # type: ignore
 
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     cfg: Dict = ckpt.get('config', {})
-    model_type = cfg.get('model_type', 'ebm_binary')
-    context_window = int(cfg.get('context_window', 32))
+    model_type = cfg.get('model_type', 'ar_binary')  # Variable context model is AR
+    context_window = int(cfg.get('context_window', cfg.get('max_len', 32)))
 
     if model_type == 'ar_binary':
         model = AutoRegressiveBinaryLM(
@@ -928,6 +928,27 @@ def main():
                       min_count=args.min_count, mix_empirical=args.mix_empirical,
                       backend=args.backend)
     result = cssr.run()
+
+    # Attach configuration summary and optional metrics
+    cfg = {
+        'data': str(args.data),
+        'backend': str(args.backend),
+        'L_max': int(args.L_max),
+        'alpha': float(args.alpha),
+        'test_method': str(args.test_method),
+        'device': str(args.device),
+        'pseudo_count_scale': float(args.pseudo_count_scale),
+        'min_count': int(args.min_count),
+        'mix_empirical': float(args.mix_empirical),
+        'context_window': int(args.context_window),
+        'temperature': float(args.temperature),
+        'prob_clip': float(args.prob_clip),
+        'model_ckpt': (str(args.model_ckpt) if args.model_ckpt is not None else None),
+        'platt_fit': bool(args.platt_fit),
+    }
+
+    if isinstance(result, dict):
+        result['config'] = cfg
 
     # Save
     with open(args.output_json, 'w') as f:

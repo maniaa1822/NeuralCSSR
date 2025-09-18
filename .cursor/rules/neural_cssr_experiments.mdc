@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
+description: basic experiment of training on golden mean and even process dataset and then testing cssr , shows reference behaviour of cssr 
+alwaysApply: false
 ---
-
 # Neural CSSR Experiments Log
 
 Date: <fill with run date>

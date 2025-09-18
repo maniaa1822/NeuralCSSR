@@ -24,6 +24,23 @@ _sys.path.append(str(_ROOT / 'nanoGPT'))
 import rep_viz as rv  # type: ignore
 
 
+def load_states_labels(path: Path) -> List[int]:
+    """Load per-position causal state labels from a .states.dat file.
+    Maps letters to integer ids deterministically (A→0, B→1, C→2, D→3 when applicable).
+    """
+    s = path.read_text()
+    letters = [c for c in s if c.isalpha()]
+    if not letters:
+        raise ValueError(f"No state labels found in {path}")
+    unique = sorted(set(letters))
+    # Prefer canonical A-D mapping when appropriate
+    if set(letters).issubset(set("ABCD")):
+        mapping = {"A": 0, "B": 1, "C": 2, "D": 3}
+    else:
+        mapping = {ch: i for i, ch in enumerate(unique)}
+    return [int(mapping[ch]) for ch in letters]
+
+
 def load_binary_tokens(dat_path: Path) -> List[int]:
     s = dat_path.read_text().strip()
     tokens = [int(c) for c in s if c in '01']
@@ -210,8 +227,9 @@ def extract_hidden_states_prefix_only_with_hook(model: EnergyBasedBinaryLM | Aut
 def main():
     ap = argparse.ArgumentParser(description='Generate EBM representation visualizations and caches')
     ap.add_argument('--ckpt', type=Path, required=True)
-    ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'custom'], default='golden_mean')
+    ap.add_argument('--preset', type=str, choices=['golden_mean', 'even_process', 'hierarchical_4_state', 'custom'], default='golden_mean')
     ap.add_argument('--data', type=Path, default=None)
+    ap.add_argument('--states_data', type=Path, default=None, help='Optional path to .states.dat with per-position labels')
     ap.add_argument('--device', type=str, default='auto')
     ap.add_argument('--context_window', type=int, default=None)
     ap.add_argument('--embed', type=str, default='pca', choices=['pca', 'umap', 'tsne'])
@@ -227,6 +245,8 @@ def main():
         args.data = Path('/home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat')
     elif args.preset == 'even_process' and args.data is None:
         args.data = Path('/home/matteo/NeuralCSSR/experiments/datasets/even_process/even_process.dat')
+    elif args.preset == 'hierarchical_4_state' and args.data is None:
+        args.data = Path('/home/matteo/NeuralCSSR/experiments/datasets/hierarchical_4_state/hierarchical_4_state.dat')
 
     if args.device == 'auto':
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -277,6 +297,19 @@ def main():
     # Causal states before each token
     if args.preset == 'even_process':
         states_all = np.array(compute_states_even_process(tokens.tolist()), dtype=np.int64)
+    elif args.preset == 'hierarchical_4_state' or (args.states_data is not None):
+        # Resolve states file if not explicitly provided
+        if args.states_data is None:
+            # Replace trailing .dat with .states.dat in the sequence path
+            states_path = Path(str(args.data).replace('.dat', '.states.dat')) if args.data is not None else None
+        else:
+            states_path = args.states_data
+        if states_path is None or not Path(states_path).exists():
+            raise FileNotFoundError(f"States file not found. Provide --states_data. Tried: {states_path}")
+        states_loaded = np.array(load_states_labels(Path(states_path)), dtype=np.int64)
+        if len(states_loaded) < len(tokens):
+            raise ValueError(f"States length ({len(states_loaded)}) shorter than tokens ({len(tokens)}).")
+        states_all = states_loaded[: len(tokens)]
     else:
         states_all = np.array(compute_states_golden_mean(tokens.tolist()), dtype=np.int64)
 
@@ -291,10 +324,15 @@ def main():
     # Ensure output dir
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scatter with P(1) overlay
-    rv.plot_state_scatter(H, s, next_probs=p1, title='EBM hidden state scatter with P(1)', embed_method=args.embed, sample=args.sample)
+    # Scatter: states-only (labels)
+    rv.plot_state_scatter(H, s, title='Hidden state scatter (labels only)', embed_method=args.embed, sample=args.sample)
     import matplotlib.pyplot as plt
-    plt.savefig(str(args.out_dir / 'viz_scatter.png'), dpi=150)
+    plt.savefig(str(args.out_dir / 'viz_scatter_states.png'), dpi=150)
+    plt.close()
+
+    # Scatter: P(1) overlay
+    rv.plot_state_scatter(H, s, next_probs=p1, title='Hidden state scatter with P(1)', embed_method=args.embed, sample=args.sample)
+    plt.savefig(str(args.out_dir / 'viz_scatter_p1.png'), dpi=150)
     plt.close()
 
     # Centroid graph using empirical transitions of states sequence
@@ -336,11 +374,18 @@ def main():
         s_l = states_all[1:1 + len(X)]
         np.savez_compressed(str(args.out_dir / f'viz_cache_layer_{ls}.npz'), H=X.astype(np.float32), states=s_l)
 
+        # Per-layer scatter plots (states-only)
+        rv.plot_state_scatter(X.astype(np.float32), s_l, title=f'Layer {ls} scatter (labels only)', embed_method=args.embed, sample=args.sample)
+        import matplotlib.pyplot as plt  # local import to ensure Agg backend is respected
+        plt.savefig(str(args.out_dir / f'viz_scatter_layer_{ls}.png'), dpi=150)
+        plt.close()
+
     print(json.dumps({
         'H_shape': list(H.shape),
         'states_shape': list(s.shape),
         'p1_shape': list(p1.shape),
-        'scatter_png': str((args.out_dir / 'viz_scatter.png').resolve()),
+        'scatter_states_png': str((args.out_dir / 'viz_scatter_states.png').resolve()),
+        'scatter_p1_png': str((args.out_dir / 'viz_scatter_p1.png').resolve()),
         'centroids_png': str((args.out_dir / 'viz_centroids.png').resolve()),
         'trajectory_png': str((args.out_dir / 'viz_trajectory.png').resolve()),
         'cache_npz': str((args.out_dir / 'viz_cache.npz').resolve()),
