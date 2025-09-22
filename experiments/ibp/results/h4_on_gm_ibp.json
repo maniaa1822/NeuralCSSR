@@ -1,0 +1,122 @@
+{
+  "preset": "golden_mean",
+  "ckpt": "/home/matteo/NeuralCSSR/experiments/ebm/checkpoints/hierarchical_4_state_ebm.pt",
+  "data": "/home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat",
+  "val_data": null,
+  "num_states": 2,
+  "val_examples": 4000,
+  "train_examples": 1000,
+  "num_probe_datasets": 20,
+  "tune_scope": "full",
+  "ft_steps": 200,
+  "ft_lr": 0.001,
+  "ft_batch_size": 64,
+  "surjective_only": true,
+  "balance_by_label": true,
+  "rib_mean": 0.9994901938426196,
+  "rib_std": 0.0005775222478828754,
+  "dib_mean": 0.44962479261639954,
+  "dib_std": 0.49707893598630826,
+  "per_task": [
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9993983192148674,
+      "dib": 0.9985041136873598
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 0.9988006947046908,
+      "dib": 0.9992489673300788
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    },
+    {
+      "degenerate": false,
+      "rib": 1.0,
+      "dib": 0.0
+    }
+  ]
+}
