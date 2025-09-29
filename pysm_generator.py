@@ -1,23 +1,92 @@
 #!/usr/bin/env python3
 """
-Generate domain-specific machine datasets for neural CSSR training using python-statemachine.
+Generate domain-specific machine datasets for neural CSSR training.
 
 Creates a single long sequence from a domain-specific finite state machine
 with aligned state trajectories for linear probe training.
 
+Now integrates with the unified machines/ package for supported machines.
+
 Usage:
-    python generate_fsm_dataset.py --machine biased_coin --length 100000 --output data/
-    python generate_fsm_dataset.py --machine unifilar_3_state --length 50000 --output data/ --seed 42
+    python pysm_generator.py --machine seven_state_human --length 100000 --output experiments/datasets/
+    python pysm_generator.py --machine golden_mean --length 50000 --output experiments/datasets/ --seed 42
 """
 import argparse
 import json
+import sys
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 
 import numpy as np
 from statemachine import StateMachine, State
 
-# --- Base Machine Definition ---
+# Import machines package
+repo_root = Path(__file__).resolve().parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
+from machines import get_machine, list_machines
+from machines.base import Machine
+
+# --- Machine Generator Adapter (NEW!) ---
+
+class MachineGenerator:
+    """Adapter that generates sequences from unified Machine objects.
+
+    This class bridges our Machine specifications with sequence generation.
+    For machines defined in machines/, this is the preferred generation method.
+    """
+
+    def __init__(self, machine: Machine, seed: Optional[int] = None):
+        """Initialize generator from a Machine object.
+
+        Args:
+            machine: Machine specification from machines/ package
+            seed: Random seed for reproducible generation
+        """
+        self.machine = machine
+        self.rng = np.random.default_rng(seed)
+        self.current_state = machine.start_state
+        self.alphabet = machine.alphabet
+        self.states = machine.states
+
+    @property
+    def start_state_name(self) -> str:
+        """Returns the initial state name."""
+        return self.machine.start_state
+
+    def get_transition_structure(self) -> Dict[str, Any]:
+        """Returns the machine's transition structure in JSON format."""
+        # Convert Machine.transitions format to the expected JSON format
+        transitions_json = {}
+        for (state, symbol), next_state in self.machine.transitions.items():
+            key = f"{state.upper()}|{symbol}"
+            transitions_json[key] = [{
+                "to_state": next_state.upper(),
+                "probability": 1.0  # Our machines have deterministic transitions
+            }]
+        return transitions_json
+
+    def step(self) -> str:
+        """Generate one symbol and transition to next state.
+
+        Uses emission probabilities from Machine.emissions and
+        transition function from Machine.transitions.
+        """
+        # Sample symbol based on current state's emission distribution
+        emission_probs = self.machine.emissions[self.current_state]
+        symbols = list(emission_probs.keys())
+        probs = list(emission_probs.values())
+        symbol = self.rng.choice(symbols, p=probs)
+
+        # Transition to next state
+        next_state = self.machine.transitions[(self.current_state, symbol)]
+        self.current_state = next_state
+
+        return symbol
+
+
+# --- Base Machine Definition (Legacy StateMachine classes) ---
 
 class StatemachineGenerator(StateMachine):
     """
@@ -713,19 +782,40 @@ class HierarchicalStateMachine(StatemachineGenerator):
 
 # --- Core Logic (Unchanged) ---
 
-def generate_sequence_with_states(machine: StatemachineGenerator, length: int) -> Tuple[str, List[int], Dict[str, int]]:
-    state_names = sorted([s.id for s in machine.states])
-    state_to_index = {name: idx for idx, name in enumerate(state_names)}
+def generate_sequence_with_states(machine, length: int) -> Tuple[str, List[int], Dict[str, int]]:
+    """Generate sequence from either MachineGenerator or StatemachineGenerator.
+
+    Args:
+        machine: Either MachineGenerator (new) or StatemachineGenerator (legacy)
+        length: Number of symbols to generate
+
+    Returns:
+        (sequence_string, state_indices, state_to_index_mapping)
+    """
+    # Detect generator type and extract state names accordingly
+    if isinstance(machine, MachineGenerator):
+        # New MachineGenerator: states are strings
+        state_names = sorted(machine.states)
+        state_to_index = {name: idx for idx, name in enumerate(state_names)}
+        get_current_state = lambda: machine.current_state
+    else:
+        # Legacy StatemachineGenerator: states are State objects
+        state_names = sorted([s.id for s in machine.states])
+        state_to_index = {name: idx for idx, name in enumerate(state_names)}
+        get_current_state = lambda: machine.current_state.id
+
     sequence, state_indices = [], []
     for _ in range(length):
-        current_state_name = machine.current_state.id
+        current_state_name = get_current_state()
         state_indices.append(state_to_index[current_state_name])
         symbol = machine.step()
         sequence.append(symbol)
+
     return ''.join(sequence), state_indices, state_to_index
 
-def save_dataset(sequence: str, state_indices: List[int], machine: StatemachineGenerator, 
+def save_dataset(sequence: str, state_indices: List[int], machine,
                 state_to_index: Dict[str, int], output_path: Path, metadata: Dict[str, Any]) -> None:
+    """Save dataset files (works with both MachineGenerator and StatemachineGenerator)."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     dat_file = output_path.with_suffix('.dat')
     dat_file.write_text(sequence)
@@ -738,9 +828,20 @@ def save_dataset(sequence: str, state_indices: List[int], machine: StatemachineG
     states_dat_file = output_path.with_suffix('.states.dat')
     states_dat_file.write_text(states_chars)
     machine_file = output_path.with_suffix('.machine.json')
+
+    # Extract machine properties (works for both generator types)
+    if isinstance(machine, MachineGenerator):
+        # New MachineGenerator
+        state_names = machine.states
+        num_states = len(machine.states)
+    else:
+        # Legacy StatemachineGenerator
+        state_names = [s.id for s in machine.states]
+        num_states = len(machine.states)
+
     machine_data = {
         'alphabet': machine.alphabet,
-        'states': sorted([s.id for s in machine.states]),
+        'states': sorted(state_names),
         'start_state': machine.start_state_name,
         'transitions': machine.get_transition_structure()
     }
@@ -748,7 +849,7 @@ def save_dataset(sequence: str, state_indices: List[int], machine: StatemachineG
     metadata_file = output_path.with_suffix('.meta.json')
     index_to_state = {idx: name for name, idx in state_to_index.items()}
     full_metadata = {
-        'sequence_length': len(sequence), 'num_states': len(machine.states),
+        'sequence_length': len(sequence), 'num_states': num_states,
         'alphabet_size': len(machine.alphabet), 'machine_type': metadata.get('machine_type', 'unknown'),
         'generation_seed': metadata.get('seed'), 'state_mapping': {'name_to_index': state_to_index, 'index_to_name': index_to_state},
         'state_index_to_char': index_to_char,
@@ -768,52 +869,142 @@ def save_dataset(sequence: str, state_indices: List[int], machine: StatemachineG
     print(f"  Metadata: {metadata_file}")
     print(f"  State mapping: {state_to_index}")
 
-def create_machine(machine_type: str, seed: int = None) -> StatemachineGenerator:
-    machine_map = {
+def create_machine(machine_type: str, seed: int = None):
+    """Create a machine generator.
+
+    For machines in the unified machines/ package (seven_state_human, golden_mean, even_process),
+    uses MachineGenerator. For legacy machines, uses the old StatemachineGenerator classes.
+
+    Args:
+        machine_type: Machine name
+        seed: Random seed
+
+    Returns:
+        MachineGenerator or StatemachineGenerator instance
+    """
+    # Try unified machines/ package first
+    try:
+        machine_spec = get_machine(machine_type)
+        return MachineGenerator(machine_spec, seed=seed)
+    except ValueError:
+        # Fall back to legacy StatemachineGenerator classes
+        pass
+
+    # Legacy machines not yet in machines/ package
+    legacy_machine_map = {
         'biased_coin': BiasedCoinMachine,
         'alternating': AlternatingMachine,
-        'golden_mean': GoldenMeanMachine,
-        'even_process': EvenProcessMachine,
-        'unifilar_3_state': Unifilar3StateMachine, # <-- ORIGINAL 3-STATE MACHINE
-        'distinct_3_state': DistinctThreeStateMachine, # <-- NEW DISTINCT 3-STATE MACHINE
-        'distinct_4_state': DistinctFourStateMachine, # <-- NEW 4-STATE MACHINE
-        'distinct_6_state': DistinctSixStateMachine, # <-- NEW 6-STATE MACHINE
-        'seven_state_human': SevenStateHumanMachine, # <-- NEW UNIFILAR 7-STATE MACHINE
-        'sevestateold': SevenStateHumanMachineOld,   # <-- LEGACY EMISSIONS VERSION
-        'anti_compression': AntiCompressionMachine, # <-- ANTI-COMPRESSION MACHINE
-        'hierarchical_4_state': HierarchicalStateMachine, # <-- HIERARCHICAL 4-STATE MACHINE
+        'unifilar_3_state': Unifilar3StateMachine,
+        'distinct_3_state': DistinctThreeStateMachine,
+        'distinct_4_state': DistinctFourStateMachine,
+        'distinct_6_state': DistinctSixStateMachine,
+        'sevestateold': SevenStateHumanMachineOld,  # Legacy emissions version
+        'anti_compression': AntiCompressionMachine,
+        'hierarchical_4_state': HierarchicalStateMachine,
     }
-    if machine_type not in machine_map:
-        raise ValueError(f"Unknown machine type: {machine_type}. Available: {', '.join(machine_map.keys())}")
-    return machine_map[machine_type](seed=seed)
+
+    if machine_type in legacy_machine_map:
+        return legacy_machine_map[machine_type](seed=seed)
+
+    # Not found in either
+    available = ', '.join(sorted(list(list_machines()) + list(legacy_machine_map.keys())))
+    raise ValueError(f"Unknown machine type: {machine_type}. Available: {available}")
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generate machine datasets using python-statemachine.")
-    parser.add_argument(
-        '--machine', required=True,
-        choices=['biased_coin', 'alternating', 'golden_mean', 'even_process', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'sevestateold', 'anti_compression', 'hierarchical_4_state'], # <-- ADDED LEGACY 7-STATE
-        help="Type of domain-specific machine to generate from."
+    """Parse command-line arguments."""
+    # Get all available machines (unified + legacy)
+    unified_machines = list_machines()
+    legacy_machines = [
+        'biased_coin', 'alternating', 'unifilar_3_state', 'distinct_3_state',
+        'distinct_4_state', 'distinct_6_state', 'sevestateold', 'anti_compression',
+        'hierarchical_4_state'
+    ]
+    all_machines = sorted(unified_machines + legacy_machines)
+
+    parser = argparse.ArgumentParser(
+        description="Generate machine datasets for neural CSSR training.",
+        epilog=f"Available machines: {', '.join(all_machines)}"
     )
-    parser.add_argument('--length', type=int, default=100000, help="Length of sequence to generate.")
-    parser.add_argument('--output', required=True, help="Base output directory.")
-    parser.add_argument('--seed', type=int, help="Random seed for reproducible generation.")
+    parser.add_argument(
+        '--machine', required=False,
+        help=f"Machine type to generate from. Use --list to see all available machines."
+    )
+    parser.add_argument('--list', action='store_true',
+        help="List all available machines and exit.")
+    parser.add_argument('--length', type=int, default=100000,
+        help="Length of sequence to generate (default: 100000).")
+    parser.add_argument('--output', required=False,
+        help="Base output directory (default: experiments/datasets/).")
+    parser.add_argument('--seed', type=int,
+        help="Random seed for reproducible generation.")
     return parser.parse_args()
 
 def main():
+    """Main entry point for dataset generation."""
     args = parse_args()
+
+    # Handle --list flag
+    if args.list:
+        print("Available machines:")
+        print("\nUnified machines/ package:")
+        for name in sorted(list_machines()):
+            machine = get_machine(name)
+            print(f"  {name:25} - {machine.num_states} states, {machine.memory_type} memory")
+        print("\nLegacy machines:")
+        legacy = [
+            'biased_coin', 'alternating', 'unifilar_3_state', 'distinct_3_state',
+            'distinct_4_state', 'distinct_6_state', 'sevestateold', 'anti_compression',
+            'hierarchical_4_state'
+        ]
+        for name in sorted(legacy):
+            print(f"  {name}")
+        return
+
+    # Default output directory
+    if args.output is None:
+        args.output = "experiments/datasets"
+
+    # Validate --machine is provided
+    if not args.machine:
+        print("Error: --machine is required (unless using --list)")
+        print("Use --list to see all available machines.")
+        return
+
     machine_type = args.machine
-    machine = create_machine(machine_type, args.seed)
+    try:
+        machine = create_machine(machine_type, args.seed)
+    except ValueError as e:
+        print(f"Error: {e}")
+        print("\nUse --list to see all available machines.")
+        return
+
     print(f"Generating '{machine_type}' dataset...")
     print(f"  Length: {args.length}, Seed: {args.seed}")
+
+    # Generate sequence
     sequence, state_indices, state_to_index = generate_sequence_with_states(machine, args.length)
+
+    # Save dataset
     metadata = {'machine_type': machine_type, 'seed': args.seed}
     machine_output_path = Path(args.output) / machine_type / machine_type
     save_dataset(sequence, state_indices, machine, state_to_index, machine_output_path, metadata)
+
+    # Print summary
     print("\nDataset generation complete!")
     unique_indices, counts = np.unique(state_indices, return_counts=True)
     index_to_name = {idx: name for name, idx in state_to_index.items()}
     state_dist = {f"{idx}({index_to_name[idx]})": count for idx, count in zip(unique_indices, counts)}
     print(f"State distribution: {state_dist}")
+
+    # Print machine info if using unified machines/
+    if isinstance(machine, MachineGenerator):
+        print(f"\nMachine properties:")
+        print(f"  Memory: {machine.machine.memory_type}, length={machine.machine.memory_length}")
+        try:
+            entropy = machine.machine.compute_theoretical_entropy()
+            print(f"  Theoretical entropy: {entropy:.4f} nats ({entropy/np.log(2):.4f} bits)")
+        except Exception as e:
+            print(f"  Theoretical entropy: (computation failed)")
 
 if __name__ == '__main__':
     main()
