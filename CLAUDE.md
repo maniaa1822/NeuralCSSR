@@ -108,14 +108,14 @@ Run unsupervised state discovery using JS divergence clustering:
 
 ```bash
 # Seven-state human with backward stability (finds minimal suffixes)
-uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
+uv run --with torch python cssr_discovery/unsupervised_fast_original.py \
   --preset seven_state_human_char_large \
   --backward_stability --tolerance_bits 1e-3 --min_suffix_len 2 \
   --stage_a_threshold 0.001 --n_samples 100 --L 5 \
   --output_json results/seven_state_results.json
 
 # Even process (simpler, no backward stability needed)
-uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
+uv run --with torch python cssr_discovery/unsupervised_fast_original.py \
   --preset even_process \
   --stage_a_threshold 0.001 --stage_b_threshold 0.001 \
   --n_samples 100 --L 5 --k_refine 4 \
@@ -182,24 +182,24 @@ uv run --with torch python experiments/ebm/train_golden_mean.py \
 
 ```
 pysm_generator.py              # Step 1: Generate datasets
-nanoGPT/
-├── data/<machine>/prepare.py  # Step 2: Prepare training data
-├── train.py                   # Step 3: Train transformer model
+
+nanoGPT/                       # Step 2-3: Training infrastructure
+├── data/<machine>/prepare.py  # Data preparation
+├── train.py                   # Train transformer model
 ├── config/train_*_char.py     # Training configurations
-├── model.py                   # nanoGPT transformer architecture
-└── js_analysis/
-    ├── unsupervised_fast_original.py  # Step 4: MAIN CSSR discovery script
-    ├── js_metrics.py          # JS divergence computation
-    ├── state_mapping.py       # Ground truth state mappings
-    ├── calibration.py         # Platt calibration for probabilities
-    └── *.py                   # Visualization and diagnostic tools
+└── model.py                   # nanoGPT transformer architecture
+
+cssr_discovery/                # Step 4: Epsilon machine discovery
+├── unsupervised_fast_original.py  # MAIN CSSR discovery algorithm
+├── js_metrics.py              # JS divergence computation
+├── state_mapping.py           # Ground truth state mappings
+└── calibration.py             # Platt calibration for probabilities
 
 experiments/
-├── datasets/<machine>/        # Generated datasets
-├── ebm/                       # Legacy: EBM/AR model training
-└── results/                   # Analysis outputs
+└── datasets/<machine>/        # Generated datasets
 
-transcssr_neural_runner.py     # Alternative: Inject neural probs into transCSSR
+transCSSR/                     # Alternative: Classical CSSR baseline
+transcssr_neural_runner.py     # Inject neural probs into transCSSR
 ```
 
 ## Machine Catalog
