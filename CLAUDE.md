@@ -23,6 +23,54 @@ uv run python script.py    # Run scripts (optional, python works directly)
 - **Visualization**: matplotlib, seaborn
 - **Graph/State Analysis**: networkx, python-igraph>=0.11.8, python-statemachine>=2.5.0
 
+## Machine Specifications (NEW!)
+
+All machines are now unified under the `machines/` package, providing a single source of truth for machine properties across the entire pipeline.
+
+### Using Machines
+
+```python
+from machines import get_machine, list_machines
+
+# List all available machines
+print(list_machines())  # ['even_process', 'golden_mean', 'seven_state_human']
+
+# Get a specific machine
+machine = get_machine("seven_state_human")
+
+# Access properties
+print(machine.states)           # ['bb', 'aaa', 'aaab', ...]
+print(machine.num_states)       # 7
+print(machine.memory_length)    # 4
+print(machine.emissions)        # {'bb': {'0': 0.9375, '1': 0.0625}, ...}
+
+# Ground truth evaluation
+import numpy as np
+history = np.array([0, 0, 0, 1])
+state = machine.get_gt_state(history)  # Returns 'aaab'
+
+# Theoretical properties
+entropy = machine.compute_theoretical_entropy()  # 0.8218 bits
+suffixes = machine.get_state_suffixes()  # {'bb': ['11'], 'aaa': ['000'], ...}
+
+# Pipeline integration
+dataset_path = machine.get_dataset_path(Path("experiments/datasets"))
+model_path = machine.get_model_path(Path("nanoGPT"), variant="char_large")
+config = machine.get_training_config(variant="char_large")
+```
+
+### Available Machines
+
+- **seven_state_human**: 7 states, finite memory (L≤4), complex suffix structure
+- **golden_mean**: 2 states, finite memory (L=1), no consecutive 0s
+- **even_process**: 2 states, infinite memory, runs of 1s have even length
+
+Each machine encapsulates:
+- Structure (states, transitions, emissions)
+- Ground truth state mapping
+- Theoretical properties (entropy, memory length)
+- Training recommendations (context window, hyperparameters)
+
 ## Current Workflow: nanoGPT + Unsupervised CSSR
 
 This is the **primary working pipeline** for epsilon-machine discovery.
@@ -181,6 +229,13 @@ uv run --with torch python experiments/ebm/train_golden_mean.py \
 ## Package Structure
 
 ```
+machines/                      # Unified machine specifications (NEW!)
+├── __init__.py                # Machine registry and factory
+├── base.py                    # Abstract Machine base class
+├── seven_state_human.py       # Seven-state human specification
+├── golden_mean.py             # Golden mean specification
+└── even_process.py            # Even process specification
+
 pysm_generator.py              # Step 1: Generate datasets
 
 nanoGPT/                       # Step 2-3: Training infrastructure
@@ -192,7 +247,7 @@ nanoGPT/                       # Step 2-3: Training infrastructure
 cssr_discovery/                # Step 4: Epsilon machine discovery
 ├── unsupervised_fast_original.py  # MAIN CSSR discovery algorithm
 ├── js_metrics.py              # JS divergence computation
-├── state_mapping.py           # Ground truth state mappings
+├── state_mapping.py           # Ground truth state mappings (uses machines/)
 └── calibration.py             # Platt calibration for probabilities
 
 transcssr_baseline/            # Alternative: Classical transCSSR baseline
@@ -247,6 +302,13 @@ uv run --with torch python cssr_discovery/unsupervised_fast_original.py \
 
 ## Key Modules
 
+**Machine Specifications** (`machines/` - NEW!):
+- `base.py`: Abstract Machine class with unified interface
+- `seven_state_human.py`, `golden_mean.py`, `even_process.py`: Machine definitions
+- **Usage**: `from machines import get_machine; machine = get_machine("seven_state_human")`
+- **Properties**: states, alphabet, transitions, emissions, memory_type, memory_length
+- **Methods**: `get_gt_state(history)`, `compute_theoretical_entropy()`, `get_training_config()`
+
 **Core Pipeline**:
 - `pysm_generator.py`: Dataset generation from finite state machines
 - `nanoGPT/train.py`: Transformer training (character-level)
@@ -255,7 +317,7 @@ uv run --with torch python cssr_discovery/unsupervised_fast_original.py \
 **CSSR Discovery Package** (`cssr_discovery/`):
 - `unsupervised_fast_original.py`: Main unsupervised state discovery algorithm
 - `js_metrics.py`: JS divergence computation, k-step distributions
-- `state_mapping.py`: Ground truth state mappings for evaluation
+- `state_mapping.py`: Ground truth state mappings (delegates to machines/)
 - `calibration.py`: Platt calibration for neural probabilities
 
 **transCSSR Baseline** (`transcssr_baseline/`):
