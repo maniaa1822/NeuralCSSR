@@ -4,298 +4,303 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Neural CSSR is a research platform for using neural networks as probability providers for Causal State Splitting Reconstruction (CSSR). The project integrates both nanoGPT transformers and Energy-Based Models (EBM) with classical CSSR to recover epsilon-machines from binary sequences.
+Neural CSSR discovers epsilon-machines (minimal causal state representations) from sequences using neural networks as probability estimators. The project has two main workflows:
+
+1. **Current Working Pipeline**: Generate data with `pysm_generator.py` → Train nanoGPT model → Discover states with `nanoGPT/js_analysis/unsupervised_fast_original.py`
+2. **Legacy/Experimental**: EBM/AR model training in `experiments/ebm/` (see section below)
 
 ## Development Environment
 
 ### Package Manager
-This project uses `uv` (not pip) for dependency management:
+This project uses `uv` (not pip):
 ```bash
-# Install dependencies
-uv sync
-
-# Run scripts
-uv run python script.py  # Optional, scripts work directly with python
+uv sync                    # Install dependencies
+uv run python script.py    # Run scripts (optional, python works directly)
 ```
 
-### Dependencies
-Key dependencies from pyproject.toml:
+### Key Dependencies
 - **Core**: torch, numpy, scipy, scikit-learn
-- **Data/Config**: pyyaml, tqdm  
 - **Visualization**: matplotlib, seaborn
-- **Graph Analysis**: networkx, python-igraph>=0.11.8
+- **Graph/State Analysis**: networkx, python-igraph>=0.11.8, python-statemachine>=2.5.0
 
-## Current Focus: Binary Language Models
+## Current Workflow: nanoGPT + Unsupervised CSSR
 
-The project focuses on binary sequence modeling using transformer architectures in `experiments/ebm/models.py`. The main training pipeline uses the **EnergyBasedBinaryLM** architecture.
+This is the **primary working pipeline** for epsilon-machine discovery.
+
+### Step 1: Generate Dataset
+
+Use `pysm_generator.py` to create binary sequences from finite state machines:
+
+```bash
+# Seven-state human machine (7 causal states)
+uv run python pysm_generator.py --machine seven_state_human --length 100000 \
+  --output experiments/datasets --seed 42
+
+# Even process (2 states, infinite memory)
+uv run python pysm_generator.py --machine even_process --length 50000 \
+  --output experiments/datasets --seed 42
+
+# Golden mean (2 states, finite memory)
+uv run python pysm_generator.py --machine golden_mean --length 50000 \
+  --output experiments/datasets --seed 42
+```
+
+**Available Machines**: `golden_mean`, `even_process`, `seven_state_human`, `sevestateold`, `biased_coin`, `alternating`, `unifilar_3_state`, `distinct_3_state`, `distinct_4_state`, `distinct_6_state`, `anti_compression`, `hierarchical_4_state`
+
+**Output Files** (in `experiments/datasets/<machine>/`):
+- `<machine>.dat`: Binary sequence (0s and 1s)
+- `<machine>.states`: Ground truth state indices
+- `<machine>.states.dat`: State sequence as characters (A, B, C, ...)
+- `<machine>.machine.json`: Transition structure
+- `<machine>.meta.json`: Metadata and mappings
+
+### Step 2: Prepare nanoGPT Data
+
+Convert `.dat` file to nanoGPT's binary format:
+
+```bash
+# Create data directory if needed
+mkdir -p nanoGPT/data/seven_state_human
+
+# Copy prepare.py template (or create one)
+# The prepare.py script reads the .dat file and creates train.bin, val.bin, meta.pkl
+
+uv run --with numpy python nanoGPT/data/seven_state_human/prepare.py
+```
+
+**Key Points**:
+- `prepare.py` scripts are machine-specific (see `nanoGPT/data/*/prepare.py` for examples)
+- Creates `train.bin`, `val.bin` (torch tensors), and `meta.pkl` (vocabulary)
+- Binary sequences use vocab: `{0, 1, 2}` where 2 is typically padding/special token
+
+### Step 3: Train nanoGPT Model
+
+Train a character-level transformer using nanoGPT's config system:
+
+```bash
+cd nanoGPT
+
+# Seven-state human (recommended settings)
+uv run --with torch --with numpy python train.py \
+  config/train_seven_state_human_char.py \
+  --device=cuda --dropout=0.0 --max_iters=10000 --lr_decay_iters=10000 \
+  --out_dir=out-seven-state-human --always_save_checkpoint=True
+
+# Even process (requires longer context)
+uv run --with torch --with numpy python train.py \
+  config/train_even_process_char.py \
+  --device=cuda --block_size=128 --dropout=0.0 --max_iters=10000 \
+  --out_dir=out-even-process --always_save_checkpoint=True
+```
+
+**Training Config Files**: `nanoGPT/config/train_<machine>_char.py`
+**Checkpoint Output**: `nanoGPT/out-<machine>/ckpt.pt`
+
+**Key Hyperparameters**:
+- `block_size`: Context window (64-128 for most machines, ≥128 for even_process)
+- `n_layer`, `n_head`, `n_embd`: Model size (default: 4 layers, 4 heads, 128 dim)
+- `dropout`: Set to 0.0 for deterministic binary processes
+- `max_iters`: Training steps (5000-10000 usually sufficient)
+
+### Step 4: Discover Epsilon Machine
+
+Run unsupervised state discovery using JS divergence clustering:
+
+```bash
+# Seven-state human with backward stability (finds minimal suffixes)
+uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
+  --preset seven_state_human_char_large \
+  --backward_stability --tolerance_bits 1e-3 --min_suffix_len 2 \
+  --stage_a_threshold 0.001 --n_samples 100 --L 5 \
+  --output_json results/seven_state_results.json
+
+# Even process (simpler, no backward stability needed)
+uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
+  --preset even_process \
+  --stage_a_threshold 0.001 --stage_b_threshold 0.001 \
+  --n_samples 100 --L 5 --k_refine 4 \
+  --output_json results/even_process_results.json
+```
+
+**Key Parameters**:
+- `--preset`: Chooses model checkpoint and data paths automatically
+- `--L`: History length for sampling (5-6 typical)
+- `--k_refine`: Horizon for k-step rollout refinement (3-4)
+- `--n_samples`: Number of histories to sample (50-100)
+- `--stage_a_threshold`: Emission clustering threshold (0.001-0.025)
+- `--stage_b_threshold`: Conditional JS refinement threshold (0.001-0.02)
+- `--backward_stability`: Enable minimal suffix detection (useful for high-memory processes)
+- `--tolerance_bits`: Tolerance for suffix pruning in bits (1e-3 typical)
+
+**Algorithm Overview**:
+1. **Stage A**: Cluster histories by emission distribution (next-token probabilities)
+2. **Stage B**: Refine clusters using multi-step (k-step) predictive distributions
+3. **Stage C**: Remerge functionally identical states (optional, via `--enable_remerging`)
+4. **Backward Stability** (optional): Find minimal suffix that preserves emission probabilities
+
+**Output**: JSON file with discovered clusters, ground truth evaluation, and epsilon machine loss
+
+### Available Presets
+
+The `unsupervised_fast_original.py` script has built-in presets that automatically set model and data paths:
+- `seven_state_human_char_large`
+- `seven_state_human_large`
+- `seven_state_human_100k`
+- `sevestateold`
+- `even_process`
+
+To use custom paths, override with `--model_ckpt` and `--data` flags.
+
+## Legacy/Experimental: EBM and AR Models
+
+Alternative training pipeline using custom binary language models (not actively used):
 
 ### Model Architecture
 
 Two model classes in `experiments/ebm/models.py`:
 
 1. **AutoRegressiveBinaryLM**: Standard transformer-based autoregressive model
-   - Uses standard `lm_head` for next-token prediction
-   - Applies softmax to logits for probability distribution
-   - Standard causal transformer with embedding and positional encoding
-   
-2. **EnergyBasedBinaryLM**: Current main focus - energy-based formulation
-   - Uses an `energy_head` instead of standard language model head
-   - Computes scores as `-energies` then applies softmax
-   - Maintains same transformer encoder architecture as AR model
-   - Used by default in `experiments/ebm/train_golden_mean.py`
+2. **EnergyBasedBinaryLM**: Energy-based formulation with energy head
 
-Key architectural features:
-- Both models support causal masking and mixed precision training
-- Identical embedding and positional encoding schemes
-- Focus on binary sequence modeling (vocab_size=3, output_vocab_size=2)
+### Training Commands
 
-### Model Training Commands
-
-The training script `experiments/ebm/train_golden_mean.py` supports both Golden Mean and Even Process presets through the `--preset` flag. It trains the **EnergyBasedBinaryLM** model by default.
-
-**Golden Mean Training:**
+**Golden Mean:**
 ```bash
 uv run --with torch python experiments/ebm/train_golden_mean.py \
-  --preset golden_mean --device auto --context_window 64 --epochs 3 --steps_per_epoch 500 \
-  --batch_size 64 --d_model 128 --layers 4 --heads 8 --dropout 0.1 --lr 3e-4
+  --preset golden_mean --device auto --context_window 64 --epochs 3 \
+  --batch_size 64 --d_model 128 --layers 4 --dropout 0.1
 ```
 
-**Even Process Training:**
+**Even Process:**
 ```bash
 uv run --with torch python experiments/ebm/train_golden_mean.py \
-  --preset even_process --device auto --context_window 128 --epochs 3 --steps_per_epoch 500 \
-  --batch_size 64 --d_model 128 --layers 4 --heads 8 --dropout 0.0 --lr 3e-4
+  --preset even_process --device auto --context_window 128 --epochs 3 \
+  --batch_size 64 --d_model 128 --layers 4 --dropout 0.0
 ```
-
-**Key Features of the Training Script:**
-- Automatic preset configuration for Golden Mean and Even Process
-- Built-in parity-aware metrics for Even Process validation
-- Support for mixed precision training (`--amp`) and TF32 (`--tf32`)
-- Automatic checkpoint and CSV logging
-- Configurable dataset subsets via `--max_tokens`
-
-**Default Dataset Paths (presets):**
-- Golden Mean: `/home/matteo/NeuralCSSR/experiments/datasets/golden_mean/golden_mean.dat`
-- Even Process: `/home/matteo/NeuralCSSR/experiments/datasets/even_process/even_process.dat`
-
-**Default Output Paths:**
-- Checkpoints: `experiments/ebm/checkpoints/{preset}_ebm.pt` 
-- Metrics: `experiments/ebm/metrics/{preset}_metrics.csv`
-
-### Model Evaluation and Analysis
-
-**Dataset Validation (Even Process):**
-```bash
-uv run python experiments/ebm/check_even_dataset.py \
-  --data notebook_experiments/even_process/even_process.dat
-```
-
-**Cross-Model Evaluation:**
-```bash
-uv run --with torch python experiments/ebm/eval_ebm.py \
-  --ckpt notebook_experiments/even_process/ebm_ckpt.pt \
-  --data notebook_experiments/golden_mean/data/golden_mean/golden_mean.dat
-```
-
-### Inductive Bias Probing (IBP)
-
-The project includes sophisticated inductive bias analysis for autoregressive models:
-
-**Even Process IBP (with probe head):**
-```bash
-uv run python notebook_experiments/ibp/ebm_ibp.py \
-  --ckpt notebook_experiments/even_process/ebm_ckpt.pt \
-  --preset even_process --train_examples 100 --val_examples 2000 \
-  --num_probe_datasets 20 --use_probe_head --ft_steps 50 --ft_lr 1e-3 \
-  --eval_batch_size 512 --log_next_token_metrics \
-  --output notebook_experiments/ibp/ebm_ibp_even_probe_nt.json
-```
-
-**Golden Mean IBP (with probe head):**
-```bash
-uv run python notebook_experiments/ibp/ebm_ibp.py \
-  --ckpt notebook_experiments/golden_mean/ebm_ckpt.pt \
-  --preset golden_mean --train_examples 100 --val_examples 2000 \
-  --num_probe_datasets 20 --use_probe_head --ft_steps 50 --ft_lr 1e-3 \
-  --eval_batch_size 512 --log_next_token_metrics \
-  --output notebook_experiments/ibp/ebm_ibp_gm_probe_nt.json
-```
-
-**Important IBP Guidelines:**
-- Always use `--use_probe_head` to preserve next-token behavior
-- Avoid `--tune_scope head/full` for IBP as it can degrade LM performance  
-- Monitor next-token retention with `--log_next_token_metrics`
-
-**IBP Recommended Parameters:**
-- `--train_examples 100`: Small balanced set per task
-- `--val_examples 2000`: Fixed validation subset
-- `--num_probe_datasets 20..50`: Number of random tasks to probe
-- `--ft_steps 50 --ft_lr 1e-3`: Light training for the probe head
-- `--eval_batch_size 512`: Efficient batch processing
-
-**IBP Metrics (R-IB/D-IB):**
-- R-IB: Fraction of same-state pairs with identical predictions (higher = better)
-- D-IB: 1 - fraction of different-state pairs with identical predictions (higher = better)
-- Recent results: Even Process R-IB≈0.98, D-IB≈0.96 with probe head retention
-
-## Legacy: nanoGPT-CSSR Pipeline
-
-The project follows the **Neural CSSR research pipeline** documented in `docs/neural_cssr_pipeline.md` - using nanoGPT models as neural probability providers for CSSR analysis.
-
-### Primary Workflow: 8-Step nanoGPT-CSSR Pipeline
-
-Based on `docs/neural_cssr_pipeline.md`:
-
-1. **Generate Dataset**: `pysm_generator.py --machine <machine> --length 50000`
-2. **Prepare nanoGPT Data**: `nanoGPT/data/<machine>/prepare.py` creates train.bin, val.bin, meta.pkl
-3. **Train nanoGPT**: Use configs in `nanoGPT/config/train_<machine>_char.py`
-4. **Analyze Logits**: `nanoGPT/analyze_logits.py` for loss vs context length analysis
-5. **Run Neural CSSR**: `run_neural_cssr.py` with `--nanogpt_out_dir` option
-6. **Generate DOT**: Automatic FSM visualization via neural_js backend
-7. **Render PNG**: Convert DOT to PNG using graphviz
-8. **Validate Results**: Compare recovered epsilon-machine with ground truth
-
-### Machine Catalog for nanoGPT Pipeline
-
-| Machine | States | nanoGPT Performance | CSSR Recovery |
-|---------|--------|-------------------|---------------|
-| `golden_mean` | 2 | Loss ≈ 0.666 bits/char | 2 states recovered |
-| `even_process` | 2 | Loss ≈ 0.671 bits/char | 2 states with proper tuning |
-| `complex_csm` | Variable | Depends on complexity | Requires JS threshold tuning |
-
-Key parameters for successful recovery:
-- `block_size` ≥ 64 for processes requiring long memory
-- `js_threshold` 0.02-0.05 (relax if over-splitting occurs)
-- `min_count` ≥ 50 for robust statistics
 
 ## Package Structure
 
 ```
-experiments/ebm/    # MAIN FOCUS: Energy-Based Models
-├── models.py       # EnergyBasedBinaryLM & AutoRegressiveBinaryLM
-├── train_golden_mean.py # EBM training script
-├── eval_ebm.py     # Model evaluation and cross-validation
-├── check_even_dataset.py # Dataset validation utilities
-└── *.yaml         # Configuration files
+pysm_generator.py              # Step 1: Generate datasets
+nanoGPT/
+├── data/<machine>/prepare.py  # Step 2: Prepare training data
+├── train.py                   # Step 3: Train transformer model
+├── config/train_*_char.py     # Training configurations
+├── model.py                   # nanoGPT transformer architecture
+└── js_analysis/
+    ├── unsupervised_fast_original.py  # Step 4: MAIN CSSR discovery script
+    ├── js_metrics.py          # JS divergence computation
+    ├── state_mapping.py       # Ground truth state mappings
+    ├── calibration.py         # Platt calibration for probabilities
+    └── *.py                   # Visualization and diagnostic tools
 
-nanoGPT/           # Legacy nanoGPT integration
-├── model.py       # Core nanoGPT transformer
-├── train.py       # Training script
-└── config/        # Training configurations
+experiments/
+├── datasets/<machine>/        # Generated datasets
+├── ebm/                       # Legacy: EBM/AR model training
+└── results/                   # Analysis outputs
 
-notebook_experiments/ # Data and checkpoints
-├── golden_mean/   # Golden mean process data
-├── even_process/  # Even process data
-└── ibp/          # Inductive bias probing results
+transcssr_neural_runner.py     # Alternative: Inject neural probs into transCSSR
 ```
 
-## Quick Start: Complete nanoGPT-CSSR Experiment
+## Machine Catalog
 
-**Example: Even Process Recovery**
+| Machine | States | Memory | Key Characteristics |
+|---------|--------|--------|---------------------|
+| `golden_mean` | 2 | Finite (L=1) | No consecutive 0s; recovers easily |
+| `even_process` | 2 | Infinite | Runs of 1s have even length; requires long context |
+| `seven_state_human` | 7 | Finite (L≤4) | Complex suffix structure; use backward stability |
+| `sevestateold` | 7 | Finite (L≤4) | Legacy emission probabilities |
+| `distinct_3_state` | 3 | Finite | Well-separated emissions |
+| `distinct_4_state` | 4 | Finite | Moderate complexity |
+| `hierarchical_4_state` | 4 | Finite | Two-level clustering structure |
+
+## Quick Reference: Complete Pipeline
+
+**Seven-State Human (Full Example)**
 
 ```bash
-# Step 1: Generate dataset (50k symbols)
-uv run python pysm_generator.py --machine even_process --length 50000 --output notebook_experiments --seed 42
+# Step 1: Generate dataset
+uv run python pysm_generator.py --machine seven_state_human --length 100000 \
+  --output experiments/datasets --seed 42
 
-# Step 2: Prepare nanoGPT data
-uv run --with numpy python nanoGPT/data/even_process/prepare.py
+# Step 2: Prepare nanoGPT data (ensure prepare.py exists)
+uv run --with numpy python nanoGPT/data/seven_state_human/prepare.py
 
-# Step 3: Train nanoGPT (GPU recommended)
+# Step 3: Train nanoGPT
 cd nanoGPT
-uv run --with torch --with numpy python train.py config/train_even_process_char.py \
-  --device=cuda --dropout=0.0 --max_iters=10000 --lr_decay_iters=10000 \
-  --out_dir=out-even-process-cuda-10k --always_save_checkpoint=True
+uv run --with torch --with numpy python train.py \
+  config/train_seven_state_human_char.py \
+  --device=cuda --dropout=0.0 --max_iters=10000 \
+  --out_dir=out-seven-state-human --always_save_checkpoint=True
+cd ..
 
-# Step 4: Analyze logits
-uv run --with torch --with numpy python analyze_logits.py \
-  --out_dir out-even-process-cuda-10k --split val \
-  --max_k 128 --num_positions 5000 --stride 5 --device cpu
-
-# Step 5: Run Neural CSSR
-uv run --with torch python -u ../run_neural_cssr.py \
-  --data ../notebook_experiments/even_process/even_process.dat \
-  --L_max 6 --context_window 64 \
-  --backend neural_js --state_metric js --js_threshold 0.03 --min_count 50 \
-  --nanogpt_out_dir out-even-process-cuda-10k \
-  --dot_out out-even-process-cuda-10k/machine.dot --json_only
-
-# Step 6: Render visualization
-uv run --with graphviz python - <<'PY'
-import subprocess; p='out-even-process-cuda-10k/machine.dot'
-subprocess.run(['dot','-Tpng',p,'-o',p.replace('.dot','.png')], check=True)
-PY
+# Step 4: Discover epsilon machine
+uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
+  --preset seven_state_human_char_large \
+  --backward_stability --tolerance_bits 1e-3 --min_suffix_len 2 \
+  --stage_a_threshold 0.001 --n_samples 100 --L 5 \
+  --output_json results/seven_state_results.json
 ```
 
-## Key Files
+## Key Modules
 
-**Core Model Files:**
-- **Models**: `experiments/ebm/models.py` - AutoRegressiveBinaryLM (main focus) & EnergyBasedBinaryLM architectures
-- **Training**: `experiments/ebm/train_golden_mean.py` - Main AR model training script
-- **Evaluation**: `experiments/ebm/eval_ebm.py` - Model evaluation and cross-validation
-- **Dataset Validation**: `experiments/ebm/check_even_dataset.py`
+**Core Pipeline**:
+- `pysm_generator.py`: Dataset generation from finite state machines
+- `nanoGPT/train.py`: Transformer training (character-level)
+- `nanoGPT/js_analysis/unsupervised_fast_original.py`: **Main CSSR discovery algorithm**
 
-**Legacy nanoGPT-CSSR Pipeline:**
-- **Main Script**: `run_neural_cssr.py` - Neural CSSR execution with nanoGPT integration  
-- **Dataset Generator**: `pysm_generator.py` - Generate binary sequences from finite state machines
+**JS Analysis Package** (`nanoGPT/js_analysis/`):
+- `js_metrics.py`: JS divergence computation, k-step distributions
+- `state_mapping.py`: Ground truth state mappings for evaluation
+- `calibration.py`: Platt calibration for neural probabilities
+- `plotting.py`, `js_diagnostics.py`: Visualization tools
 
-## Model Training Guidelines
+**Model Implementations**:
+- `nanoGPT/model.py`: nanoGPT transformer (used in main pipeline)
+- `experiments/ebm/models.py`: EBM/AR models (experimental)
 
-**Key Parameters for Binary Processes:**
-- **Golden Mean**: `context_window=64`, `dropout=0.1`, optimal for 2-state recovery
-- **Even Process**: `context_window=128`, `dropout=0.0`, requires longer memory for parity detection
-- **Universal**: Use `--device auto` for automatic GPU/CPU selection
-- **Performance**: Enable AMP/TF32 for GPU speedups on larger contexts
+## Algorithm Details
 
-**Expected Validation Metrics:**
-- **Golden Mean**: H≈2/3 bits; p(0|0)≈0, p(0|1)≈0.5  
-- **Even Process**: p0|Even≈0.5, p0|Odd≈0.0; fraction_Odd≈1/3
+### JS Divergence Clustering
 
-**Performance Tuning Tips:**
-- Increase context window (128–256) for Even Process parity detection
-- Use `dropout=0.0` and `weight_decay=0.0` for small binary tasks
-- Enable AMP/TF32 for GPU speedups: `--amp --tf32`
-- For Even Process: requires longer memory, use `context_window=128` minimum
+The `unsupervised_fast_original.py` script implements a three-stage algorithm:
 
-## Command Reference
+**Stage A - Emission Clustering**: Agglomerative clustering based on next-token probability distributions. Merges histories until JS divergence exceeds `stage_a_threshold`.
 
-All commands use `uv` package manager. For training commands, copy-paste directly into terminal.
+**Stage B - Rollout Refinement**: Within each emission cluster, refines using k-step conditional JS divergence. Uses representatives to avoid O(n²) comparisons. Controlled by `stage_b_threshold` and `k_refine`.
 
-**Important**: Commands are designed to be copy-pasteable for immediate execution.
+**Stage C - State Remerging** (optional): Detects functionally identical states by comparing both emissions and multi-step rollouts. Critical for infinite-memory processes. Enable with `--enable_remerging`.
 
-## Experimental Results
+**Backward Stability** (optional): For each history, finds the shortest suffix that preserves emission distribution within `tolerance_bits`. Useful for identifying minimal causal states in high-memory processes.
 
-Based on actual training runs and evaluations in the codebase:
+### Key Insights
 
-### Model Performance Summary
+- **Emission signatures** group histories with similar immediate predictions
+- **Multi-step rollouts** distinguish states with different long-term behavior
+- **Backward stability** finds minimal sufficient statistics (e.g., "BA" vs "001001BA")
+- **Platt calibration** improves probability estimates from neural logits
 
-**Golden Mean Results:**
-- **EBM Model**: Converges to ~0.455 nats (0.656 bits), achieving target metrics p(0|0)≈0.004, p(0|1)≈0.553
-- **AR Model**: Similar performance ~0.461 nats (0.667 bits), p(0|0)≈0.0001, p(0|1)≈0.491
-- **Both models**: Successfully learn Golden Mean structure with zero violations
+## Common Issues and Solutions
 
-**Even Process Results:**
-- **EBM Model**: Achieves ~0.499 nats (0.720 bits) with proper parity metrics:
-  - p0|Even≈0.399, p0|Odd≈0.083, frac_Odd≈0.344 (close to theoretical 1/3)
-- **AR Model**: Similar performance ~0.513 nats (0.740 bits) with:
-  - p0|Even≈0.435, p0|Odd≈0.151, frac_Odd≈0.333 (exact theoretical)
-- **Context dependency**: Even Process requires `context_window≥128` for proper parity learning
+**Issue**: nanoGPT training loss plateaus above theoretical entropy
+- **Solution**: Increase `block_size`, reduce `dropout`, train longer
 
-### Inductive Bias Probing (IBP) Results
+**Issue**: CSSR discovers too many states (over-splitting)
+- **Solution**: Increase `stage_a_threshold` and `stage_b_threshold`, or enable remerging
 
-**Golden Mean AR Model (20 probe tasks):**
-- R-IB: 0.998 ± 0.001 (excellent state discrimination)
-- D-IB: 0.848 ± 0.356 (high variance across tasks)
-- Next-token retention: 65.4% accuracy preserved
+**Issue**: CSSR discovers too few states (under-splitting)
+- **Solution**: Decrease thresholds, increase `k_refine`, ensure model is well-trained
 
-**Even Process EBM Model (1 probe task):**
-- R-IB: 0.981 (strong state consistency)  
-- D-IB: 0.963 (excellent differentiation)
-- Next-token retention: 64.9% accuracy preserved
-- Proper parity detection: argmax0|Odd≈0.005 (near-zero as expected)
+**Issue**: Even process fails to recover 2 states
+- **Solution**: Use `block_size>=128`, enable `--enable_remerging` with low thresholds
 
-### Training Characteristics
+**Issue**: Seven-state machine discovers >7 states
+- **Solution**: Use `--backward_stability` to find minimal suffixes and deduplicate
 
-**Convergence**: Both models typically converge within 3 epochs (1500 steps total)
-**Stability**: EBM models show slightly more stable final metrics
-**Memory Requirements**: Even Process needs 2-4x context window vs Golden Mean
-**Performance**: Both architectures achieve similar final loss values on both processes
+## Tips for New Machines
+
+1. **Start simple**: Test with `golden_mean` (2 states, easy to recover)
+2. **Check training**: Verify nanoGPT achieves near-theoretical entropy
+3. **Calibrate**: Platt calibration is automatic but check diagnostics
+4. **Tune thresholds**: Start with `stage_a_threshold=0.001`, adjust based on results
+5. **Use ground truth**: Compare discovered states with `state_mapping.py` mappings
