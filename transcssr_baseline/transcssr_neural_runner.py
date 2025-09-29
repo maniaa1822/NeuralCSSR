@@ -30,7 +30,7 @@ def _load_nano_gpt_model(model_ckpt: Path, device: torch.device):
     if not ckpt_path.exists():
         raise FileNotFoundError(f"nanoGPT checkpoint not found: {ckpt_path}")
     # import nanoGPT model
-    repo_root = Path(__file__).resolve().parents[0]
+    repo_root = Path(__file__).resolve().parents[1]  # transcssr_baseline is in repo root
     nano_dir = repo_root / 'nanoGPT'
     if str(nano_dir) not in sys.path:
         sys.path.insert(0, str(nano_dir))
@@ -245,7 +245,7 @@ def main():
     from neural_cssr_state_averaging import ModelProvider, load_model_from_ckpt
 
     # Import transCSSR
-    repo_root = Path(__file__).resolve().parents[0]
+    repo_root = Path(__file__).resolve().parents[1]  # transcssr_baseline is in repo root
     transcssr_dir = repo_root / 'transCSSR'
     sys.path.insert(0, str(transcssr_dir))
     from transCSSR import estimate_predictive_distributions, run_transCSSR, get_transitions
@@ -293,7 +293,7 @@ def main():
                 if args.head_ckpt is None:
                     raise SystemExit('--head_ckpt is required when using an early-layer head')
                 # Lazy import to avoid hard dependency
-                repo_root = Path(__file__).resolve().parents[0]
+                repo_root = Path(__file__).resolve().parents[1]  # transcssr_baseline is in repo root
                 ebm_dir = repo_root / 'experiments' / 'ebm'
                 if str(ebm_dir) not in sys.path:
                     sys.path.insert(0, str(ebm_dir))

@@ -195,11 +195,14 @@ cssr_discovery/                # Step 4: Epsilon machine discovery
 ├── state_mapping.py           # Ground truth state mappings
 └── calibration.py             # Platt calibration for probabilities
 
+transcssr_baseline/            # Alternative: Classical transCSSR baseline
+├── transcssr_neural_runner.py # Inject neural probs into transCSSR
+└── neural_cssr_state_averaging.py  # ModelProvider for neural probabilities
+
+transCSSR/                     # Classical CSSR library (external)
+
 experiments/
 └── datasets/<machine>/        # Generated datasets
-
-transCSSR/                     # Alternative: Classical CSSR baseline
-transcssr_neural_runner.py     # Inject neural probs into transCSSR
 ```
 
 ## Machine Catalog
@@ -235,7 +238,7 @@ uv run --with torch --with numpy python train.py \
 cd ..
 
 # Step 4: Discover epsilon machine
-uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
+uv run --with torch python cssr_discovery/unsupervised_fast_original.py \
   --preset seven_state_human_char_large \
   --backward_stability --tolerance_bits 1e-3 --min_suffix_len 2 \
   --stage_a_threshold 0.001 --n_samples 100 --L 5 \
@@ -247,13 +250,17 @@ uv run --with torch python nanoGPT/js_analysis/unsupervised_fast_original.py \
 **Core Pipeline**:
 - `pysm_generator.py`: Dataset generation from finite state machines
 - `nanoGPT/train.py`: Transformer training (character-level)
-- `nanoGPT/js_analysis/unsupervised_fast_original.py`: **Main CSSR discovery algorithm**
+- `cssr_discovery/unsupervised_fast_original.py`: **Main CSSR discovery algorithm**
 
-**JS Analysis Package** (`nanoGPT/js_analysis/`):
+**CSSR Discovery Package** (`cssr_discovery/`):
+- `unsupervised_fast_original.py`: Main unsupervised state discovery algorithm
 - `js_metrics.py`: JS divergence computation, k-step distributions
 - `state_mapping.py`: Ground truth state mappings for evaluation
 - `calibration.py`: Platt calibration for neural probabilities
-- `plotting.py`, `js_diagnostics.py`: Visualization tools
+
+**transCSSR Baseline** (`transcssr_baseline/`):
+- `transcssr_neural_runner.py`: Inject neural probabilities into classical transCSSR
+- `neural_cssr_state_averaging.py`: ModelProvider for neural probability estimation
 
 **Model Implementations**:
 - `nanoGPT/model.py`: nanoGPT transformer (used in main pipeline)
