@@ -440,14 +440,14 @@ class SevenStateHumanMachine(StatemachineGenerator):
     UNIFILAR CONSTRAINT: Each (state, symbol) pair has deterministic transitions.
     Only the emission probabilities are stochastic.
     
-    States represent sequence contexts from Figure 3 (suffix-defined):
-    BB: 15/16 → 0, 1/16 → 1
-    AAA: 3/16 → 0, 13/16 → 1  
-    AAAB: 7/16 → 0, 9/16 → 1
-    BA: 7/16 → 0, 9/16 → 1
-    BAB: 8/16 → 0, 8/16 → 1
-    BAAB: 7/16 → 0, 9/16 → 1
-    BAA: 3/16 → 0, 13/16 → 1
+    States represent sequence contexts from Figure 3 (suffix-defined, A≡0, B≡1):
+    BB: 15/16 → 0 (0.9375), 1/16 → 1 (0.0625)
+    AAA: 3/16 → 0 (0.1875), 13/16 → 1 (0.8125)
+    AAAB: 3/16 → 0 (0.1875), 13/16 → 1 (0.8125)
+    BA: 9/16 → 0 (0.5625), 7/16 → 1 (0.4375)
+    BAB: 4/16 → 0 (0.25), 12/16 → 1 (0.75)
+    BAAB: 12/16 → 0 (0.75), 4/16 → 1 (0.25)
+    BAA: 9/16 → 0 (0.5625), 7/16 → 1 (0.4375)
     
     Transition structure (UNIFILAR via suffix-closure of appended symbol):
     BB --0--> BA,   BB --1--> BB
@@ -529,19 +529,96 @@ class SevenStateHumanMachine(StatemachineGenerator):
             # AAA: 3/16 → 0, 13/16 → 1
             return self.send('aaa_emits_0') if self.rng.random() < 3/16 else self.send('aaa_emits_1')
         elif current_state == self.aaab:
-            # AAAB: 7/16 → 0, 9/16 → 1
+            # AAAB: 3/16 → 0, 13/16 → 1
+            return self.send('aaab_emits_0') if self.rng.random() < 3/16 else self.send('aaab_emits_1')
+        elif current_state == self.ba:
+            # BA: 9/16 → 0, 7/16 → 1
+            return self.send('ba_emits_0') if self.rng.random() < 9/16 else self.send('ba_emits_1')
+        elif current_state == self.bab:
+            # BAB: 4/16 → 0, 12/16 → 1
+            return self.send('bab_emits_0') if self.rng.random() < 4/16 else self.send('bab_emits_1')
+        elif current_state == self.baab:
+            # BAAB: 12/16 → 0, 4/16 → 1
+            return self.send('baab_emits_0') if self.rng.random() < 12/16 else self.send('baab_emits_1')
+        else:  # BAA
+            # BAA: 9/16 → 0, 7/16 → 1
+            return self.send('baa_emits_0') if self.rng.random() < 9/16 else self.send('baa_emits_1')
+
+class SevenStateHumanMachineOld(StatemachineGenerator):
+    """
+    Legacy UNIFILAR 7-state machine (pre-correction emissions), kept as 'sevestateold'.
+    A≡0, B≡1. Transitions identical to the corrected version; emissions as originally implemented:
+    BB: 15/16 → 0, 1/16 → 1
+    AAA: 3/16 → 0, 13/16 → 1
+    AAAB: 7/16 → 0, 9/16 → 1
+    BA: 7/16 → 0, 9/16 → 1
+    BAB: 8/16 → 0, 8/16 → 1
+    BAAB: 7/16 → 0, 9/16 → 1
+    BAA: 3/16 → 0, 13/16 → 1
+    """
+    # Define all 7 states
+    bb = State("BB", initial=True)
+    aaa = State("AAA")
+    aaab = State("AAAB") 
+    ba = State("BA")
+    bab = State("BAB")
+    baab = State("BAAB")
+    baa = State("BAA")
+
+    # UNIFILAR transitions (same as corrected)
+    bb_emits_0 = bb.to(ba, on="on_emit_0")
+    bb_emits_1 = bb.to(bb, on="on_emit_1")
+    aaa_emits_0 = aaa.to(aaa, on="on_emit_0")
+    aaa_emits_1 = aaa.to(aaab, on="on_emit_1")
+    aaab_emits_0 = aaab.to(ba, on="on_emit_0")
+    aaab_emits_1 = aaab.to(bb, on="on_emit_1")
+    ba_emits_0 = ba.to(baa, on="on_emit_0")
+    ba_emits_1 = ba.to(bab, on="on_emit_1")
+    bab_emits_0 = bab.to(ba, on="on_emit_0")
+    bab_emits_1 = bab.to(bb, on="on_emit_1")
+    baab_emits_0 = baab.to(ba, on="on_emit_0")
+    baab_emits_1 = baab.to(bb, on="on_emit_1")
+    baa_emits_0 = baa.to(aaa, on="on_emit_0")
+    baa_emits_1 = baa.to(baab, on="on_emit_1")
+
+    def __init__(self, seed: int = None):
+        super().__init__(seed)
+        self.alphabet = ['0', '1']
+        self._transition_info = {
+            "BB|0": [{"to_state": "BA", "probability": 1.0}],
+            "BB|1": [{"to_state": "BB", "probability": 1.0}],
+            "AAA|0": [{"to_state": "AAA", "probability": 1.0}],
+            "AAA|1": [{"to_state": "AAAB", "probability": 1.0}],
+            "AAAB|0": [{"to_state": "BA", "probability": 1.0}],
+            "AAAB|1": [{"to_state": "BB", "probability": 1.0}],
+            "BA|0": [{"to_state": "BAA", "probability": 1.0}],
+            "BA|1": [{"to_state": "BAB", "probability": 1.0}],
+            "BAB|0": [{"to_state": "BA", "probability": 1.0}],
+            "BAB|1": [{"to_state": "BB", "probability": 1.0}],
+            "BAAB|0": [{"to_state": "BA", "probability": 1.0}],
+            "BAAB|1": [{"to_state": "BB", "probability": 1.0}],
+            "BAA|0": [{"to_state": "AAA", "probability": 1.0}],
+            "BAA|1": [{"to_state": "BAAB", "probability": 1.0}],
+        }
+
+    def on_emit_0(self) -> str: return '0'
+    def on_emit_1(self) -> str: return '1'
+
+    def step(self) -> str:
+        current_state = self.current_state
+        if current_state == self.bb:
+            return self.send('bb_emits_0') if self.rng.random() < 15/16 else self.send('bb_emits_1')
+        elif current_state == self.aaa:
+            return self.send('aaa_emits_0') if self.rng.random() < 3/16 else self.send('aaa_emits_1')
+        elif current_state == self.aaab:
             return self.send('aaab_emits_0') if self.rng.random() < 7/16 else self.send('aaab_emits_1')
         elif current_state == self.ba:
-            # BA: 7/16 → 0, 9/16 → 1
             return self.send('ba_emits_0') if self.rng.random() < 7/16 else self.send('ba_emits_1')
         elif current_state == self.bab:
-            # BAB: 8/16 → 0, 8/16 → 1 (perfectly balanced)
             return self.send('bab_emits_0') if self.rng.random() < 8/16 else self.send('bab_emits_1')
         elif current_state == self.baab:
-            # BAAB: 7/16 → 0, 9/16 → 1
             return self.send('baab_emits_0') if self.rng.random() < 7/16 else self.send('baab_emits_1')
         else:  # BAA
-            # BAA: 3/16 → 0, 13/16 → 1
             return self.send('baa_emits_0') if self.rng.random() < 3/16 else self.send('baa_emits_1')
 
 class HierarchicalStateMachine(StatemachineGenerator):
@@ -702,6 +779,7 @@ def create_machine(machine_type: str, seed: int = None) -> StatemachineGenerator
         'distinct_4_state': DistinctFourStateMachine, # <-- NEW 4-STATE MACHINE
         'distinct_6_state': DistinctSixStateMachine, # <-- NEW 6-STATE MACHINE
         'seven_state_human': SevenStateHumanMachine, # <-- NEW UNIFILAR 7-STATE MACHINE
+        'sevestateold': SevenStateHumanMachineOld,   # <-- LEGACY EMISSIONS VERSION
         'anti_compression': AntiCompressionMachine, # <-- ANTI-COMPRESSION MACHINE
         'hierarchical_4_state': HierarchicalStateMachine, # <-- HIERARCHICAL 4-STATE MACHINE
     }
@@ -713,7 +791,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate machine datasets using python-statemachine.")
     parser.add_argument(
         '--machine', required=True,
-        choices=['biased_coin', 'alternating', 'golden_mean', 'even_process', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'anti_compression', 'hierarchical_4_state'], # <-- ADDED HIERARCHICAL
+        choices=['biased_coin', 'alternating', 'golden_mean', 'even_process', 'unifilar_3_state', 'distinct_3_state', 'distinct_4_state', 'distinct_6_state', 'seven_state_human', 'sevestateold', 'anti_compression', 'hierarchical_4_state'], # <-- ADDED LEGACY 7-STATE
         help="Type of domain-specific machine to generate from."
     )
     parser.add_argument('--length', type=int, default=100000, help="Length of sequence to generate.")
