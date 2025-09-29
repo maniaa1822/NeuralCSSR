@@ -25,65 +25,7 @@ repo_root = Path(__file__).resolve().parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from machines import get_machine, list_machines
-from machines.base import Machine
-
-# --- Machine Generator Adapter (NEW!) ---
-
-class MachineGenerator:
-    """Adapter that generates sequences from unified Machine objects.
-
-    This class bridges our Machine specifications with sequence generation.
-    For machines defined in machines/, this is the preferred generation method.
-    """
-
-    def __init__(self, machine: Machine, seed: Optional[int] = None):
-        """Initialize generator from a Machine object.
-
-        Args:
-            machine: Machine specification from machines/ package
-            seed: Random seed for reproducible generation
-        """
-        self.machine = machine
-        self.rng = np.random.default_rng(seed)
-        self.current_state = machine.start_state
-        self.alphabet = machine.alphabet
-        self.states = machine.states
-
-    @property
-    def start_state_name(self) -> str:
-        """Returns the initial state name."""
-        return self.machine.start_state
-
-    def get_transition_structure(self) -> Dict[str, Any]:
-        """Returns the machine's transition structure in JSON format."""
-        # Convert Machine.transitions format to the expected JSON format
-        transitions_json = {}
-        for (state, symbol), next_state in self.machine.transitions.items():
-            key = f"{state.upper()}|{symbol}"
-            transitions_json[key] = [{
-                "to_state": next_state.upper(),
-                "probability": 1.0  # Our machines have deterministic transitions
-            }]
-        return transitions_json
-
-    def step(self) -> str:
-        """Generate one symbol and transition to next state.
-
-        Uses emission probabilities from Machine.emissions and
-        transition function from Machine.transitions.
-        """
-        # Sample symbol based on current state's emission distribution
-        emission_probs = self.machine.emissions[self.current_state]
-        symbols = list(emission_probs.keys())
-        probs = list(emission_probs.values())
-        symbol = self.rng.choice(symbols, p=probs)
-
-        # Transition to next state
-        next_state = self.machine.transitions[(self.current_state, symbol)]
-        self.current_state = next_state
-
-        return symbol
+from machines import MachineGenerator, get_machine, list_machines
 
 
 # --- Base Machine Definition (Legacy StateMachine classes) ---

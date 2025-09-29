@@ -28,6 +28,7 @@ Usage:
 
 from typing import Dict, List
 from .base import Machine
+from .generator import MachineGenerator, generate_sequence_with_states, save_dataset
 
 # Global registry of all machines
 MACHINE_REGISTRY: Dict[str, Machine] = {}
@@ -86,6 +87,9 @@ from . import even_process
 
 __all__ = [
     'Machine',
+    'MachineGenerator',
+    'generate_sequence_with_states',
+    'save_dataset',
     'get_machine',
     'list_machines',
     'register_machine',
