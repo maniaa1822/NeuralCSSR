@@ -8,7 +8,10 @@
       "Bash(git add:*)",
       "Bash(find:*)",
       "Bash(mv:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "WebSearch",
+      "Bash(dpkg:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

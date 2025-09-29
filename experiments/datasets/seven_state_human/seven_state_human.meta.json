@@ -1,9 +1,9 @@
 {
-  "sequence_length": 1000000,
+  "sequence_length": 100000,
   "num_states": 7,
   "alphabet_size": 2,
   "machine_type": "seven_state_human",
-  "generation_seed": null,
+  "generation_seed": 1,
   "state_mapping": {
     "name_to_index": {
       "aaa": 0,

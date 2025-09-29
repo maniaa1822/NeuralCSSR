@@ -1,0 +1,156 @@
+JS Diagnostics for preset: seven_state_human_char_large
+Model: /home/matteo/NeuralCSSR/nanoGPT/out-seven-state-human-char-large/ckpt.pt
+Data: /home/matteo/NeuralCSSR/experiments/datasets/seven_state_human/seven_state_human.dat
+number of parameters: 0.39M
+Data length: 100000
+
+Fitting Platt calibration...
+Platt params: {'a': 0.9510687901681717, 'b': 0.012726627971346435}
+
+============================================================
+JS DIAGNOSTICS: MODEL STATE RECOGNITION
+============================================================
+
+--- WITHIN-STATE JS (lower = better state recognition) ---
+
+[WITHIN-STATE] bb (n=8 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000104  min=0.000000  max=0.000421  n=28
+  k=4 (conditional): JS mean=0.000118  min=0.000007  max=0.000426  n=28 | branch: js0~0.000117, js1~0.000265, w0_bar~0.991, w1_bar~0.009
+  k=4-7 (multi-k): JS mean=0.000177  min=0.000011  max=0.000537  n=28
+
+[WITHIN-STATE] aaa (n=4 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000044  min=0.000006  max=0.000118  n=6
+  k=4 (conditional): JS mean=0.000108  min=0.000037  max=0.000283  n=6 | branch: js0~0.000106, js1~0.000140, w0_bar~0.729, w1_bar~0.271
+  k=4-7 (multi-k): JS mean=0.000055  min=0.000031  max=0.000106  n=6
+
+[WITHIN-STATE] aaab (n=2 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000115  min=0.000115  max=0.000115  n=1
+  k=4 (conditional): JS mean=0.000021  min=0.000021  max=0.000021  n=1 | branch: js0~0.000071, js1~0.000011, w0_bar~0.181, w1_bar~0.819
+  k=4-7 (multi-k): JS mean=0.000036  min=0.000036  max=0.000036  n=1
+
+[WITHIN-STATE] ba (n=8 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000024  min=0.000000  max=0.000100  n=28
+  k=4 (conditional): JS mean=0.000218  min=0.000023  max=0.000615  n=28 | branch: js0~0.000224, js1~0.000118, w0_bar~0.937, w1_bar~0.063
+  k=4-7 (multi-k): JS mean=0.000200  min=0.000023  max=0.000612  n=28
+
+[WITHIN-STATE] bab (n=4 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000062  min=0.000000  max=0.000185  n=6
+  k=4 (conditional): JS mean=0.000068  min=0.000016  max=0.000168  n=6 | branch: js0~0.000074, js1~0.000067, w0_bar~0.749, w1_bar~0.251
+  k=4-7 (multi-k): JS mean=0.000065  min=0.000020  max=0.000144  n=6
+
+[WITHIN-STATE] baab (n=2 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000089  min=0.000089  max=0.000089  n=1
+  k=4 (conditional): JS mean=0.000180  min=0.000180  max=0.000180  n=1 | branch: js0~0.000150, js1~0.000272, w0_bar~0.754, w1_bar~0.246
+  k=4-7 (multi-k): JS mean=0.000072  min=0.000072  max=0.000072  n=1
+
+[WITHIN-STATE] baa (n=4 histories), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000045  min=0.000000  max=0.000133  n=6
+  k=4 (conditional): JS mean=0.000153  min=0.000024  max=0.000272  n=6 | branch: js0~0.000131, js1~0.000285, w0_bar~0.855, w1_bar~0.145
+  k=4-7 (multi-k): JS mean=0.000172  min=0.000033  max=0.000311  n=6
+
+--- BETWEEN-STATE JS (higher = better discrimination) ---
+
+[JS-REPORT] bb vs aaa (reps 8 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.326400  min=0.312367  max=0.339965  n=32
+  k=4 (conditional): JS mean=0.142036  min=0.124242  max=0.220842  n=32 | branch: js0~0.129812, js1~0.331700, w0_bar~0.941, w1_bar~0.059
+  k=4-7 (multi-k): JS mean=0.053658  min=0.051008  max=0.056472  n=32
+
+[JS-REPORT] bb vs aaab (reps 8 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.331782  min=0.316997  max=0.344588  n=16
+  k=4 (conditional): JS mean=0.000256  min=0.000058  max=0.000654  n=16 | branch: js0~0.000245, js1~0.000296, w0_bar~0.933, w1_bar~0.067
+  k=4-7 (multi-k): JS mean=0.000376  min=0.000081  max=0.001006  n=16
+
+[JS-REPORT] bb vs ba (reps 8 x 8), L=5, k_refine=4
+  k=1 (emission): JS mean=0.103829  min=0.094210  max=0.111491  n=64
+  k=4 (conditional): JS mean=0.165509  min=0.156699  max=0.192834  n=64 | branch: js0~0.161675, js1~0.277448, w0_bar~0.968, w1_bar~0.032
+  k=4-7 (multi-k): JS mean=0.131284  min=0.126863  max=0.135372  n=64
+
+[JS-REPORT] bb vs bab (reps 8 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.277462  min=0.262188  max=0.290899  n=32
+  k=4 (conditional): JS mean=0.000177  min=0.000014  max=0.000680  n=32 | branch: js0~0.000175, js1~0.000172, w0_bar~0.945, w1_bar~0.055
+  k=4-7 (multi-k): JS mean=0.000248  min=0.000011  max=0.000910  n=32
+
+[JS-REPORT] bb vs baab (reps 8 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.033794  min=0.028358  max=0.038652  n=16
+  k=4 (conditional): JS mean=0.000264  min=0.000050  max=0.000520  n=16 | branch: js0~0.000244, js1~0.000578, w0_bar~0.969, w1_bar~0.031
+  k=4-7 (multi-k): JS mean=0.000352  min=0.000047  max=0.000893  n=16
+
+[JS-REPORT] bb vs baa (reps 8 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.100552  min=0.091151  max=0.109138  n=32
+  k=4 (conditional): JS mean=0.129940  min=0.108173  max=0.140156  n=32 | branch: js0~0.133329, js1~0.034381, w0_bar~0.965, w1_bar~0.035
+  k=4-7 (multi-k): JS mean=0.060521  min=0.057223  max=0.063577  n=32
+
+[JS-REPORT] aaa vs aaab (reps 4 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000077  min=0.000000  max=0.000246  n=8
+  k=4 (conditional): JS mean=0.191302  min=0.128613  max=0.293481  n=8 | branch: js0~0.130533, js1~0.327427, w0_bar~0.694, w1_bar~0.306
+  k=4-7 (multi-k): JS mean=0.026171  min=0.025292  max=0.027255  n=8
+
+[JS-REPORT] aaa vs ba (reps 4 x 8), L=5, k_refine=4
+  k=1 (emission): JS mean=0.076284  min=0.071615  max=0.082653  n=32
+  k=4 (conditional): JS mean=0.158762  min=0.067144  max=0.187838  n=32 | branch: js0~0.177043, js1~0.003527, w0_bar~0.894, w1_bar~0.106
+  k=4-7 (multi-k): JS mean=0.052067  min=0.048860  max=0.056617  n=32
+
+[JS-REPORT] aaa vs bab (reps 4 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.002818  min=0.001707  max=0.004319  n=16
+  k=4 (conditional): JS mean=0.169294  min=0.124671  max=0.288750  n=16 | branch: js0~0.129190, js1~0.332530, w0_bar~0.804, w1_bar~0.196
+  k=4-7 (multi-k): JS mean=0.028672  min=0.027197  max=0.030519  n=16
+
+[JS-REPORT] aaa vs baab (reps 4 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.171451  min=0.164475  max=0.179681  n=8
+  k=4 (conditional): JS mean=0.175691  min=0.133562  max=0.227148  n=8 | branch: js0~0.132685, js1~0.318528, w0_bar~0.766, w1_bar~0.234
+  k=4-7 (multi-k): JS mean=0.048184  min=0.045653  max=0.051088  n=8
+
+[JS-REPORT] aaa vs baa (reps 4 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.079250  min=0.073607  max=0.085635  n=16
+  k=4 (conditional): JS mean=0.027086  min=0.000049  max=0.107322  n=16 | branch: js0~0.000202, js1~0.175096, w0_bar~0.844, w1_bar~0.156
+  k=4-7 (multi-k): JS mean=0.000327  min=0.000054  max=0.000773  n=16
+
+[JS-REPORT] aaab vs ba (reps 2 x 8), L=5, k_refine=4
+  k=1 (emission): JS mean=0.079282  min=0.074148  max=0.085282  n=16
+  k=4 (conditional): JS mean=0.178506  min=0.157102  max=0.234918  n=16 | branch: js0~0.160217, js1~0.273435, w0_bar~0.838, w1_bar~0.162
+  k=4-7 (multi-k): JS mean=0.084605  min=0.083122  max=0.087017  n=16
+
+[JS-REPORT] aaab vs bab (reps 2 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.003457  min=0.002138  max=0.004972  n=8
+  k=4 (conditional): JS mean=0.000093  min=0.000061  max=0.000175  n=8 | branch: js0~0.000082, js1~0.000115, w0_bar~0.710, w1_bar~0.290
+  k=4-7 (multi-k): JS mean=0.000111  min=0.000065  max=0.000214  n=8
+
+[JS-REPORT] aaab vs baab (reps 2 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.175697  min=0.168114  max=0.183347  n=4
+  k=4 (conditional): JS mean=0.000185  min=0.000118  max=0.000259  n=4 | branch: js0~0.000110, js1~0.000223, w0_bar~0.734, w1_bar~0.266
+  k=4-7 (multi-k): JS mean=0.000099  min=0.000058  max=0.000157  n=4
+
+[JS-REPORT] aaab vs baa (reps 2 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.082300  min=0.076172  max=0.088306  n=8
+  k=4 (conditional): JS mean=0.112864  min=0.071910  max=0.139373  n=8 | branch: js0~0.134129, js1~0.032536, w0_bar~0.789, w1_bar~0.211
+  k=4-7 (multi-k): JS mean=0.032423  min=0.030980  max=0.034009  n=8
+
+[JS-REPORT] ba vs bab (reps 8 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.050908  min=0.046108  max=0.056485  n=32
+  k=4 (conditional): JS mean=0.173970  min=0.160172  max=0.231991  n=32 | branch: js0~0.161854, js1~0.278226, w0_bar~0.898, w1_bar~0.102
+  k=4-7 (multi-k): JS mean=0.089572  min=0.087649  max=0.092418  n=32
+
+[JS-REPORT] ba vs baab (reps 8 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.021430  min=0.018498  max=0.024077  n=16
+  k=4 (conditional): JS mean=0.176285  min=0.164151  max=0.197192  n=16 | branch: js0~0.164080, js1~0.265085, w0_bar~0.874, w1_bar~0.126
+  k=4-7 (multi-k): JS mean=0.121869  min=0.119446  max=0.125445  n=16
+
+[JS-REPORT] ba vs baa (reps 8 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.000058  min=0.000000  max=0.000237  n=32
+  k=4 (conditional): JS mean=0.179508  min=0.161482  max=0.194100  n=32 | branch: js0~0.183927, js1~0.133431, w0_bar~0.918, w1_bar~0.082
+  k=4-7 (multi-k): JS mean=0.075352  min=0.070143  max=0.082418  n=32
+
+[JS-REPORT] bab vs baab (reps 4 x 2), L=5, k_refine=4
+  k=1 (emission): JS mean=0.133820  min=0.126049  max=0.141683  n=8
+  k=4 (conditional): JS mean=0.000261  min=0.000136  max=0.000417  n=8 | branch: js0~0.000140, js1~0.000440, w0_bar~0.781, w1_bar~0.219
+  k=4-7 (multi-k): JS mean=0.000150  min=0.000105  max=0.000221  n=8
+
+[JS-REPORT] bab vs baa (reps 4 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.053373  min=0.047733  max=0.058992  n=16
+  k=4 (conditional): JS mean=0.118276  min=0.075954  max=0.138714  n=16 | branch: js0~0.132734, js1~0.034618, w0_bar~0.852, w1_bar~0.148
+  k=4-7 (multi-k): JS mean=0.034919  min=0.032735  max=0.037400  n=16
+
+[JS-REPORT] baab vs baa (reps 2 x 4), L=5, k_refine=4
+  k=1 (emission): JS mean=0.019866  min=0.017079  max=0.022915  n=8
+  k=4 (conditional): JS mean=0.121447  min=0.098026  max=0.144141  n=8 | branch: js0~0.136221, js1~0.029075, w0_bar~0.861, w1_bar~0.139
+  k=4-7 (multi-k): JS mean=0.055022  min=0.051733  max=0.058479  n=8
