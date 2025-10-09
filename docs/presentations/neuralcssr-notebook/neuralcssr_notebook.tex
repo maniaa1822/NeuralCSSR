@@ -1223,7 +1223,213 @@ Building on the inductive bias probing framework developed in our experiments, f
     \item \textbf{Multitask representation shaping}: Design auxiliary tasks that encourage the formation of interpretable causal state representations in hidden layers
 \end{itemize}
 
-\subsection{Scaling to Real-World Sequential Data}
+\section{Multitask Latent Factorization Experiments}
+
+\begin{notebox}[Objective]
+Shape nanoGPT's hidden representations so that $\varepsilon$-states and structural primitives become linearly accessible while preserving next-token performance. We use standard cross-entropy heads attached to selected layers (no custom losses).
+\end{notebox}
+
+\subsection{Tasks and Setups}
+\begin{itemize}
+    \item \textbf{LM (baseline only)}: next-token prediction.
+    \item \textbf{$\varepsilon$-state head}: per-token causal-state classification.
+    \item \textbf{Distance head}: for the current $\varepsilon$-state, predict the shortest hop-count to every other state (6 classes including ``unreachable'').
+    \item \textbf{Taps}: primarily \texttt{lm\_head\_input} (also tested early blocks).
+\end{itemize}
+
+\subsection{Quantitative Summary (\texttt{lm\_head\_input})}
+\vspace{-0.5em}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Configuration & Val LM loss & $\varepsilon$ acc & Dist acc \\
+\midrule
+Baseline (30k, frozen probes) & -- & $\approx 89.3\%$ & $\approx 32.9\%$ \\
+Baseline-35k (10k total LM) & $\approx 0.540$ & $\approx 98.1\%$ & $\approx 32.9\%$ \\
+Multitask (5k $\varepsilon$+dist) & $\approx 0.540$ & $\approx 97.7\%$ & $\approx 98.5\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{-0.5em}
+
+\noindent \textit{Takeaway}: LM-only training does not make structural distances linearly readable; multitask supervision dramatically improves factorization without harming LM loss.
+
+\subsection{Latent Projections}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../../../entanglement_plots/latent_space_eps_dist_vs_baseline.png}
+    \caption{PCA at \texttt{lm\_head\_input}: Baseline vs. $\varepsilon$+Distance multitask. Multitask yields tight, margin-separated clusters with graph-consistent geometry.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../../../entanglement_plots/latent_space_10k_vs_5k.png}
+    \caption{PCA comparison with explicit step labels: Baseline 10k LM-only vs. Multitask 5k $\varepsilon$+Distance. Extra LM steps sharpen $\varepsilon$ separability but do not recover distance structure.}
+\end{figure}
+
+\subsection{Current Explorations}
+\begin{itemize}
+    \item \textbf{Ablations}: (i) $\varepsilon$-only, (ii) distance-only, (iii) layer taps and bottlenecks.
+    \item \textbf{Evaluation}: FER/NLI/fragmentation across layers; few-shot probe curves.
+    \item \textbf{Data efficiency}: supervision budgets for heads vs. LM losses.
+\end{itemize}
+
+\subsection{Configuration Pointers}
+\begin{itemize}
+    \item Baseline: \texttt{nanoGPT/out-seven-state-human-mtl100k-baseline/ckpt.pt}
+    \item Multitask ($\varepsilon$+dist): \texttt{nanoGPT/mtl/config/train\_multitask\_seven\_state\_mtl100k\_eps\_dist.py}
+    \item Distance-only: \texttt{nanoGPT/mtl/config/train\_multitask\_seven\_state\_mtl100k\_dist\_only.py}
+\end{itemize}
+
+\section{OOD Robustness and Cheap Adaptation}
+
+\subsection{Setup and Evaluator}
+\begin{notebox}[Evaluator]
+We evaluate baseline vs. multitask finetunes ($\varepsilon$; $\varepsilon$+distance) under controlled OOD regimes using:\\
+\texttt{\small ./scripts/eval\_ood.sh} (wraps \texttt{nanoGPT/mtl/eval\_ood.py}). Key flags:
+\begin{itemize}
+  \item \texttt{--regime} in \{\texttt{emission\_mix}, \texttt{start\_state\_uniform}, \texttt{transition\_noise}, \texttt{alphabet\_swap}, \texttt{state\_dependent\_swap}, \texttt{temporal\_swap}\}
+  \item \texttt{--remap-swap} or \texttt{--remap-matrix a,b,c,d}: post-hoc 2×2 probability remap (binary vocab)
+  \item \texttt{--context-tokens K}: prefix-only scoring (few-shot support; score the tail)
+  \item \texttt{--fit-remap \{global,state\}}: learn remap from the prefix (state = per-$\varepsilon$-state)
+\end{itemize}
+\end{notebox}
+
+\subsubsection{OOD Regimes}
+\vspace{-0.5em}
+\begin{itemize}
+  \item \textbf{Emission mix} ($\alpha$): soften emissions towards uniform (moderate covariate shift).
+  \item \textbf{Start-state uniform}: randomize the initial causal state (tests recovery from different starts).
+  \item \textbf{Transition noise} ($p$): random state jumps (dynamics perturbation).
+  \item \textbf{Alphabet swap}: global permutation of 0/1 emissions (severe head miscalibration).
+  \item \textbf{State-dependent swap} (fraction): swap emissions for a subset of states (head miscalibration conditioned on hidden state).
+  \item \textbf{Temporal swap} ($p$): at each timestep, swap with probability $p$ (time-varying mapping).
+\end{itemize}
+
+\subsubsection{Protocol and Metrics}
+\vspace{-0.5em}
+\begin{itemize}
+  \item \textbf{Token windows}: non-overlapping windows of size 64; total tokens per run: 65,536 unless noted.
+  \item \textbf{Prefix-only scoring}: with \texttt{--context-tokens K}, only the suffix $t\in[K,\dots,T)$ contributes to metrics; the prefix acts as observed support.
+  \item \textbf{Head calibration}: \texttt{--remap-swap} applies a fixed 2×2 swap; \texttt{--fit-remap global} learns a single 2×2 matrix via least-squares on the prefix; \texttt{--fit-remap state} learns one 2×2 per $\varepsilon$-state using prefix labels.
+  \item \textbf{Reported}: LM cross-entropy (bits/token), $\varepsilon$-accuracy, distance-accuracy (geometry), and scored token count.
+\end{itemize}
+
+\subsection{Findings}
+\begin{resultbox}[Summary]
+\vspace{-0.5em}
+\begin{itemize}
+  \item \textbf{Zero-shot LM}: On moderate shifts, LM ties; on severe emission permutation (alphabet swap), baseline has best raw LM. Multitask retains superior $\varepsilon$/geometry accuracy (structure remains aligned).
+  \item \textbf{Cheap adaptation}: Tiny head remaps recover LM quickly. With \texttt{--remap-swap}, $\varepsilon$/$\varepsilon$+dist match/beat baseline on LM while keeping structural advantages.
+  \item \textbf{Few-shot}: With \texttt{--context-tokens 16}, calibrated heads still favor $\varepsilon$+dist; context-fitted remaps (global/per-state) further reduce LM under harder regimes.
+  \item \textbf{Hard regimes}: \texttt{state\_dependent\_swap} and \texttt{temporal\_swap} break global remaps. Per-state fitted remaps (using $\varepsilon$-labels) restore LM to \~0.61 bits; temporal global fit drops LM to \~1.00 bits.
+\end{itemize}
+\vspace{-0.5em}
+\end{resultbox}
+
+\subsection{Representative Results}
+\begin{notebox}[Alphabet Swap]
+\textit{Raw (zero-shot)}: \texttt{results/alphabet\_swap\_raw.csv:2-4} \\
+Baseline 2.656, $\varepsilon$ 2.735, $\varepsilon$+dist 2.817 bits/token.\\
+\textit{Calibrated (\texttt{--remap-swap})}: \texttt{results/alphabet\_swap\_calibrated.csv:2-4} \\
+Baseline 0.539, $\varepsilon$ 0.527, $\varepsilon$+dist 0.523 bits/token.\\
+\textit{Few-shot + calibrated (\texttt{--context-tokens 16})}: \texttt{results/alphabet\_swap\_context16\_calibrated.csv:2-4} \\
+Baseline 0.548, $\varepsilon$ 0.535, $\varepsilon$+dist 0.531 bits/token.
+\end{notebox}
+
+\begin{notebox}[State-Dependent Swap (harder)]
+\textit{Raw}: \texttt{results/state\_dependent\_swap\_0p5.csv:2-4} \\
+Baseline 2.862, $\varepsilon$ 2.975, $\varepsilon$+dist 3.067 bits/token; $\varepsilon$+dist keeps high distance acc (\~0.678).\\
+\textit{Per-state fitted remap (\texttt{--context-tokens 16 --fit-remap state})}: \texttt{results/state\_dependent\_swap\_0p5\_fitstate.csv:2-4} \\
+Baseline 0.610, $\varepsilon$ 0.641, $\varepsilon$+dist 0.618 bits/token.
+\end{notebox}
+
+\begin{notebox}[Temporal Swap (time-varying)]
+\textit{Raw}: \texttt{results/temporal\_swap\_0p5.csv:2-4} \; all \~1.34 bits/token.\\
+\textit{Global fit from 16 support tokens}: \texttt{results/temporal\_swap\_0p5\_fitglobal.csv:2-4} \; all \~1.00 bits/token.
+\end{notebox}
+
+\subsubsection{Compact Tables}
+\vspace{-0.5em}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Alphabet swap & Baseline & $\varepsilon$ & $\varepsilon$+dist \\
+\midrule
+Raw (bits/token) & 2.656 & 2.735 & 2.817 \\
+Calibrated & 0.539 & 0.527 & \textbf{0.523} \\
+Calibrated (ctx16) & 0.548 & 0.535 & \textbf{0.531} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{-0.75em}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+State-dep swap (0.5) & Baseline & $\varepsilon$ & $\varepsilon$+dist \\
+\midrule
+Raw (bits/token) & \textbf{2.862} & 2.975 & 3.067 \\
+Per-state fit (ctx16) & \textbf{0.610} & 0.641 & 0.618 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{-0.75em}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Temporal swap (0.5) & Baseline & $\varepsilon$ & $\varepsilon$+dist \\
+\midrule
+Raw (bits/token) & 1.343 & \textbf{1.334} & 1.337 \\
+Global fit (ctx16) & \textbf{1.001} & 1.001 & 1.001 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Interpretation}
+\begin{notebox}[Why Multitask Helps]
+\begin{itemize}
+  \item \textbf{Causal alignment}: Latents track $\varepsilon$-states/geometry; OOD head miscalibration is isolated and cheap to fix.
+  \item \textbf{Linear separability}: Factorized latents enable tiny remaps/probes to work with few samples.
+  \item \textbf{Failure isolation}: $\varepsilon$/geometry stable while LM degrades \textrightarrow{} diagnose and adapt the head only.
+  \item \textbf{Compositional generalization}: Stable state geometry supports multi-step rollouts and state-aware adapters.
+\end{itemize}
+\end{notebox}
+
+\subsection{Methodological Notes and Limitations}
+\begin{itemize}
+  \item \textbf{Prefix fitting}: Current per-state fitting uses ground-truth $\varepsilon$ on the prefix to establish an upper bound. In deployment, use $\varepsilon$-head predictions and confidence gating.
+  \item \textbf{Binary vocab}: Remap examples are 2×2 (binary). For larger alphabets, use permutation matrices or low-rank adapters on logits.
+  \item \textbf{What calibration changes}: Only LM loss changes under remaps; $\varepsilon$/distance metrics remain unchanged by design.
+  \item \textbf{When remaps fail}: State/time-dependent mappings (hard regimes) require per-state or time-aware adapters; global remaps are insufficient.
+\end{itemize}
+
+\subsection{Reproduction Snippets}
+\begin{codebox}[Selected Commands]
+\lstset{basicstyle=\ttfamily\scriptsize}
+\begin{lstlisting}
+# Alphabet swap: raw vs calibrated vs few-shot calibrated
+./scripts/eval_ood.sh --model baseline=nanoGPT/out-seven-state-human-mtl100k-baseline/ckpt.pt \
+  --model eps=out-seven-state-human-mtl100k-mtl-eps/ckpt_final.pt \
+  --model epsdist=out-seven-state-human-mtl100k-mtl-eps-dist/ckpt_final.pt \
+  --regime alphabet_swap --severity 1.0 --tokens 65536 --output results/alphabet_swap_raw.csv
+./scripts/eval_ood.sh ... --regime alphabet_swap --severity 1.0 --tokens 65536 \
+  --remap-swap --output results/alphabet_swap_calibrated.csv
+./scripts/eval_ood.sh ... --regime alphabet_swap --severity 1.0 --tokens 65536 \
+  --context-tokens 16 --remap-swap --output results/alphabet_swap_context16_calibrated.csv
+
+# Hard regime: per-state fitted remap from 16-token context
+./scripts/eval_ood.sh ... --regime state_dependent_swap --severity 0.5 --tokens 65536 \
+  --context-tokens 16 --fit-remap state --output results/state_dependent_swap_0p5_fitstate.csv
+
+# Temporal swap: global fit from 16-token context
+./scripts/eval_ood.sh ... --regime temporal_swap --severity 0.5 --tokens 65536 \
+  --context-tokens 16 --fit-remap global --output results/temporal_swap_0p5_fitglobal.csv
+\end{lstlisting}
+\end{codebox}
+
+\section{Scaling to Real-World Sequential Data}
 
 The ultimate goal is extending Neural CSSR to natural sequential processes:
 

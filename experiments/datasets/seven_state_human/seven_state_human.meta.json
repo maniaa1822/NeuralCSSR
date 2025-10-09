@@ -2,8 +2,9 @@
   "sequence_length": 100000,
   "num_states": 7,
   "alphabet_size": 2,
-  "machine_type": "seven_state_human",
-  "generation_seed": 1,
+  "machine_name": "seven_state_human",
+  "display_name": "Seven-State Human",
+  "generation_seed": null,
   "state_mapping": {
     "name_to_index": {
       "aaa": 0,
@@ -38,5 +39,12 @@
     "states": "seven_state_human.states",
     "states_dat": "seven_state_human.states.dat",
     "machine": "seven_state_human.machine.json"
-  }
+  },
+  "n_seeds": 2,
+  "length_per_seed": 50000,
+  "start_seed": 0,
+  "seeds": [
+    0,
+    1
+  ]
 }

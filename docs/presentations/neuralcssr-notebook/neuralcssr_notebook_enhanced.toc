@@ -1,0 +1,79 @@
+\contentsline {chapter}{Abstract}{i}{chapter*.1}%
+\contentsline {chapter}{List of Figures}{v}{section*.2}%
+\contentsline {chapter}{List of Figures}{v}{section*.2}%
+\contentsline {chapter}{List of Tables}{vi}{section*.3}%
+\contentsline {chapter}{List of Tables}{vi}{section*.3}%
+\contentsline {chapter}{List of Algorithms}{vii}{chapter*.4}%
+\contentsline {chapter}{Mathematical Notation}{viii}{chapter*.5}%
+\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Motivation and Background}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}The Challenge: Parameter Brittleness in Classical CSSR}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Our Solution: Neural CSSR}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Contributions Summary}{3}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Document Organization}{3}{section.1.5}%
+\contentsline {chapter}{\numberline {2}Theoretical Foundations}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Epsilon Machines and Computational Mechanics}{4}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Causal Equivalence and Predictive Sufficiency}{4}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Statistical Complexity and Entropy Rate}{4}{subsection.2.1.2}%
+\contentsline {section}{\numberline {2.2}Classical CSSR Algorithm}{4}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Algorithm Overview}{4}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Statistical Testing and Its Limitations}{6}{subsection.2.2.2}%
+\contentsline {section}{\numberline {2.3}Information-Theoretic Foundations}{6}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Jensen-Shannon Divergence}{6}{subsection.2.3.1}%
+\contentsline {chapter}{\numberline {3}Neural CSSR Methodology}{7}{chapter.3}%
+\contentsline {section}{\numberline {3.1}System Architecture}{7}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Three-Stage Discovery Algorithm}{7}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Stage A: Emission-Based Clustering}{7}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Stage A+: Backward Stability Refinement}{8}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Stage B: Conditional Refinement}{8}{subsection.3.2.3}%
+\contentsline {subsection}{\numberline {3.2.4}Stage C: Functional State Remerging}{8}{subsection.3.2.4}%
+\contentsline {section}{\numberline {3.3}Implementation Details}{10}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Transformer Architecture}{10}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Probability Calibration}{10}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Computational Complexity}{10}{subsection.3.3.3}%
+\contentsline {chapter}{\numberline {4}Experimental Results}{11}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Benchmark Processes}{11}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Golden Mean Process}{11}{subsection.4.1.1}%
+\contentsline {subsection}{\numberline {4.1.2}Even Process}{12}{subsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.1.3}Seven-State Human Machine}{12}{subsection.4.1.3}%
+\contentsline {section}{\numberline {4.2}Seven-State Human: Perfect Recovery}{12}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Discovery Results}{12}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Discovered State Structure}{14}{subsection.4.2.2}%
+\contentsline {section}{\numberline {4.3}Even Process: Infinite Memory Solution}{14}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}The Infinite Memory Challenge}{14}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Functional Equivalence Detection}{14}{subsection.4.3.2}%
+\contentsline {section}{\numberline {4.4}Comparative Analysis}{15}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Classical vs Neural CSSR}{15}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Scalability Analysis}{15}{subsection.4.4.2}%
+\contentsline {chapter}{\numberline {5}Representation Analysis}{16}{chapter.5}%
+\contentsline {section}{\numberline {5.1}JS Divergence Properties}{16}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}State Separability}{16}{subsection.5.1.1}%
+\contentsline {subsection}{\numberline {5.1.2}History Length Dependence}{17}{subsection.5.1.2}%
+\contentsline {section}{\numberline {5.2}Hidden Representation Entanglement}{17}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Why Hidden States Fail}{17}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Functional vs Representational Discovery}{18}{subsection.5.2.2}%
+\contentsline {chapter}{\numberline {6}Advanced Topics}{19}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Multitask Representation Learning}{19}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Factorizing Latent Representations}{19}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Quantitative Results}{19}{subsection.6.1.2}%
+\contentsline {section}{\numberline {6.2}Out-of-Distribution Robustness}{19}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}OOD Evaluation Framework}{19}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Adaptation Strategies}{21}{subsection.6.2.2}%
+\contentsline {chapter}{\numberline {7}Conclusions and Future Directions}{22}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Summary of Contributions}{22}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Implications for Computational Mechanics}{22}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Future Research Directions}{23}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}Methodological Extensions}{23}{subsection.7.3.1}%
+\contentsline {subsection}{\numberline {7.3.2}Applications}{23}{subsection.7.3.2}%
+\contentsline {subsection}{\numberline {7.3.3}Theoretical Questions}{23}{subsection.7.3.3}%
+\contentsline {section}{\numberline {7.4}Closing Remarks}{23}{section.7.4}%
+\contentsline {chapter}{\numberline {A}Algorithm Pseudocode}{24}{appendix.A}%
+\contentsline {section}{\numberline {A.1}Complete Three-Stage Algorithm}{24}{section.A.1}%
+\contentsline {chapter}{\numberline {B}Extended Experimental Data}{26}{appendix.B}%
+\contentsline {section}{\numberline {B.1}Detailed Seven-State Results}{26}{section.B.1}%
+\contentsline {section}{\numberline {B.2}Parameter Sensitivity Analysis}{26}{section.B.2}%
+\contentsline {chapter}{\numberline {C}Mathematical Proofs}{27}{appendix.C}%
+\contentsline {section}{\numberline {C.1}JS Divergence Properties}{27}{section.C.1}%
+\contentsline {section}{\numberline {C.2}Convergence of Three-Stage Algorithm}{27}{section.C.2}%
+\contentsline {chapter}{References}{28}{appendix*.34}%
+\contentsline {chapter}{Index}{29}{appendix*.35}%

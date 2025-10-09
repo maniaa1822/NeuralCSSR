@@ -11,7 +11,13 @@
       "Bash(git mv:*)",
       "WebSearch",
       "Bash(dpkg:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(python:*)",
+      "Bash(uv run:*)",
+      "Bash(chmod:*)",
+      "Bash(export PYTHONPATH=/home/matteo/NeuralCSSR)",
+      "Bash(bash:*)",
+      "Bash(tree:*)"
     ],
     "deny": []
   }

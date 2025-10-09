@@ -1,0 +1,20 @@
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Classical CSSR's parameter brittleness: discovered state count grows uncontrollably with history length for processes with long-range dependencies. The true state count is 2 (Even Process) or 7 (Seven-State Human).}}{2}{figure.caption.7}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Neural CSSR system architecture showing the flow from training data through neural probability estimation to epsilon machine discovery}}{7}{figure.caption.9}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Golden Mean process epsilon machine}}{11}{figure.caption.16}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Even Process epsilon machine}}{12}{figure.caption.17}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Seven-State Human machine from human subject experiments, serving as a complex benchmark with precise emission probabilities}}{13}{figure.caption.18}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Runtime scaling comparison showing Neural CSSR's computational advantage}}{15}{figure.caption.23}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces JS divergence matrices showing clear state separation (dark diagonal = within-state similarity, bright off-diagonal = between-state difference)}}{16}{figure.caption.24}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces JS divergence as a function of history length $L$, showing stable separation between within-state and between-state comparisons}}{17}{figure.caption.25}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces t-SNE visualizations of hidden representations across layers, showing persistent entanglement and lack of clear state clustering}}{17}{figure.caption.26}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces PCA visualization showing dramatic improvement in latent space organization with multitask learning (left: baseline, right: multitask)}}{20}{figure.caption.28}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }

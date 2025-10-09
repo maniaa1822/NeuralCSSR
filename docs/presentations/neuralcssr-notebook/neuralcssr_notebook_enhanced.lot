@@ -1,0 +1,22 @@
+\contentsline {table}{\numberline {1}{\ignorespaces Mathematical notation used throughout this document}}{viii}{table.caption.6}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Transformer model specifications for different processes}}{10}{table.caption.14}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Computational complexity comparison}}{10}{table.caption.15}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Stage-by-stage discovery for Seven-State Human (30 histories, $L=5$)}}{12}{table.caption.19}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Discovered minimal contexts and emission probabilities}}{14}{table.caption.20}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Stage C remerging analysis for Even Process}}{14}{table.caption.21}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Performance comparison across benchmark processes}}{15}{table.caption.22}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Multitask learning impact on representation quality}}{19}{table.caption.27}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces OOD test regimes and their characteristics}}{20}{table.caption.29}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces OOD performance comparison (alphabet swap regime)}}{21}{table.caption.30}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {B.1}{\ignorespaces Complete clustering progression for Seven-State Human}}{26}{table.caption.32}%
+\contentsline {table}{\numberline {B.2}{\ignorespaces Parameter sensitivity for different thresholds}}{26}{table.caption.33}%
+\addvspace {10\p@ }

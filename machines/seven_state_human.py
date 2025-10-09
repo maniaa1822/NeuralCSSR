@@ -64,15 +64,15 @@ class SevenStateHumanMachine(Machine):
 
     @property
     def emissions(self) -> Dict[str, Dict[str, float]]:
-        """Emission probabilities (corrected from Figure 3)."""
+        """Emission probabilities from Figure 3 (human sequence prediction study)."""
         return {
             "bb": {"0": 15.0/16.0, "1": 1.0/16.0},
             "aaa": {"0": 3.0/16.0, "1": 13.0/16.0},
-            "aaab": {"0": 7.0/16.0, "1": 9.0/16.0},
-            "ba": {"0": 7.0/16.0, "1": 9.0/16.0},
-            "bab": {"0": 8.0/16.0, "1": 8.0/16.0},
-            "baab": {"0": 7.0/16.0, "1": 9.0/16.0},
-            "baa": {"0": 3.0/16.0, "1": 13.0/16.0},
+            "aaab": {"0": 3.0/16.0, "1": 13.0/16.0},
+            "ba": {"0": 9.0/16.0, "1": 7.0/16.0},
+            "bab": {"0": 4.0/16.0, "1": 12.0/16.0},
+            "baab": {"0": 12.0/16.0, "1": 4.0/16.0},
+            "baa": {"0": 9.0/16.0, "1": 7.0/16.0},
         }
 
     # ===== Memory Properties =====

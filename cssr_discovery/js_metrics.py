@@ -8,7 +8,7 @@ probability distributions, extracting subsequences, and getting model prediction
 import numpy as np
 import torch
 from scipy.stats import entropy
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 
 def extract_subsequences(data: np.ndarray, L: int) -> List[np.ndarray]:
@@ -25,81 +25,154 @@ def js_divergence(p: np.ndarray, q: np.ndarray) -> float:
     return 0.5 * (entropy(p, m) + entropy(q, m))
 
 
-def get_next_token_distribution(model, history: np.ndarray, platt_params: Optional[dict] = None) -> np.ndarray:
-    """Get P(x|history) from your trained transformer."""
-    # Convert history to model input format
+def get_next_token_distribution(model,
+                                history: Sequence[np.ndarray] | np.ndarray,
+                                platt_params: Optional[dict] = None) -> np.ndarray:
+    """Get P(x|history) from the transformer, supporting batched inputs."""
+
+    def _ensure_array(h) -> np.ndarray:
+        arr = np.asarray(h, dtype=np.int64)
+        if arr.ndim == 0:
+            arr = arr.reshape(1)
+        elif arr.ndim > 1:
+            arr = arr.reshape(-1)
+        return arr
+
+    def _apply_platt(p_vec: np.ndarray) -> np.ndarray:
+        if platt_params is None or 'a' not in platt_params or 'b' not in platt_params:
+            return p_vec
+        a = float(platt_params['a'])
+        b = float(platt_params['b'])
+        eps = 1e-12
+        p1 = float(p_vec[1])
+        p1c = max(eps, min(1.0 - eps, p1))
+        logit = np.log(p1c / (1.0 - p1c))
+        s = a * logit + b
+        p1_adj = float(1.0 / (1.0 + np.exp(-s)))
+        p1_adj = max(1e-6, min(1.0 - 1e-6, p1_adj))
+        p0_adj = 1.0 - p1_adj
+        return np.array([p0_adj, p1_adj], dtype=np.float64)
+
+    # Normalize input into a list while preserving order
+    is_single = False
+    if isinstance(history, np.ndarray) and history.ndim == 2:
+        histories = [history[i] for i in range(history.shape[0])]
+    elif isinstance(history, (list, tuple)):
+        histories = list(history)
+    else:
+        histories = [history]
+        is_single = True
+
+    ctx = getattr(getattr(model, 'config', None), 'block_size', None)
+    ctx_val = int(ctx) if ctx is not None else None
+    try:
+        model_device = next(model.parameters()).device
+    except (StopIteration, AttributeError):
+        model_device = torch.device('cpu')
+
+    if len(histories) == 0:
+        return np.empty((0, 2), dtype=np.float64)
+
+    outputs: List[np.ndarray] = []
     with torch.no_grad():
-        # Truncate to model context window if available
-        ctx = getattr(getattr(model, 'config', None), 'block_size', None)
-        if ctx is not None and len(history) > int(ctx):
-            ids = history[-int(ctx):]
-        else:
-            ids = history
-        x = torch.tensor(ids, dtype=torch.long).unsqueeze(0)
-        # Move to model device if possible
-        try:
-            device = next(model.parameters()).device
-            x = x.to(device)
-        except Exception:
-            pass
-        out = model(x)
-        logits = out[0] if isinstance(out, (tuple, list)) else out
-        if logits.dim() == 3:
-            logits = logits[:, -1, :]
-        probs = torch.softmax(logits, dim=-1).squeeze(0).detach().cpu().numpy()
-        if probs.shape[-1] < 2:
-            return np.array([0.5, 0.5], dtype=np.float64)
-        p0, p1 = float(probs[0]), float(probs[1])
-        # Optional Platt calibration on p1
-        if platt_params is not None and 'a' in platt_params and 'b' in platt_params:
-            a = float(platt_params['a']); b = float(platt_params['b'])
-            eps = 1e-12
-            p1c = max(eps, min(1.0 - eps, p1))
-            logit = np.log(p1c / (1.0 - p1c))
-            s = a * logit + b
-            p1 = float(1.0 / (1.0 + np.exp(-s)))
-            p1 = max(1e-6, min(1.0 - 1e-6, p1))
-            p0 = 1.0 - p1
-        s = p0 + p1
-        if s <= 0:
-            return np.array([0.5, 0.5], dtype=np.float64)
-        return np.array([p0 / s, p1 / s], dtype=np.float64)
+        # Group histories by length for efficient batching
+        buckets: dict[int, List[tuple[int, np.ndarray]]] = {}
+        for idx, h in enumerate(histories):
+            arr = _ensure_array(h)
+            buckets.setdefault(len(arr), []).append((idx, arr))
+
+        # Prepare result placeholder
+        ordered_results: dict[int, np.ndarray] = {}
+
+        for length, items in buckets.items():
+            arr_batch = np.vstack([item[1][-ctx_val:] if ctx_val is not None and len(item[1]) > ctx_val else item[1]
+                                   for item in items]).astype(np.int64, copy=False)
+            x = torch.from_numpy(arr_batch)
+            if model_device is not None:
+                x = x.to(model_device)
+            out = model(x)
+            logits = out[0] if isinstance(out, (tuple, list)) else out
+            if logits.dim() == 3:
+                logits = logits[:, -1, :]
+            probs = torch.softmax(logits, dim=-1).detach().cpu().numpy()
+            if probs.shape[-1] < 2:
+                probs = np.tile(np.array([[0.5, 0.5]], dtype=np.float64), (probs.shape[0], 1))
+            # Apply Platt per row and store in original order
+            for (idx, _), p in zip(items, probs):
+                p0, p1 = float(p[0]), float(p[1])
+                s = p0 + p1
+                if s <= 0:
+                    base = np.array([0.5, 0.5], dtype=np.float64)
+                else:
+                    base = np.array([p0 / s, p1 / s], dtype=np.float64)
+                ordered_results[idx] = _apply_platt(base)
+
+    outputs = [ordered_results[i] for i in range(len(histories))]
+    result = np.stack(outputs, axis=0)
+    return result[0] if is_single else result
 
 
-def get_kstep_distribution(model, history: np.ndarray, k: int, platt_params: Optional[dict] = None) -> np.ndarray:
+def get_kstep_distribution(model,
+                           history: Sequence[np.ndarray] | np.ndarray,
+                           k: int,
+                           platt_params: Optional[dict] = None) -> np.ndarray:
     """
     Compute exact k-step distribution over binary sequences by chaining next-token probabilities.
 
-    Returns a vector of length 2^k in lexicographic order (0..0, 0..1, ..., 1..1).
+    Supports single histories, lists of histories, or 2D numpy arrays. Returns an array of
+    shape (2^k,) for single histories, or (N, 2^k) when given a batch.
     """
-    if k <= 0:
-        return np.array([1.0], dtype=np.float64)
 
-    num_paths = 1 << k
-    probs = np.zeros(num_paths, dtype=np.float64)
+    def _ensure_array(h: Sequence[int] | np.ndarray) -> np.ndarray:
+        arr = np.asarray(h, dtype=np.int64)
+        if arr.ndim == 0:
+            return arr.reshape(1)
+        if arr.ndim > 1:
+            return arr.reshape(-1)
+        return arr
 
-    # stack entries: (history_tuple, depth, log_prob, index_prefix)
-    initial_hist_tuple = tuple(int(x) for x in history.tolist())
-    stack = [(initial_hist_tuple, 0, 0.0, 0)]
+    def _single_kstep(hist_arr: np.ndarray) -> np.ndarray:
+        if k <= 0:
+            return np.array([1.0], dtype=np.float64)
 
-    while stack:
-        hist_tuple, depth, logp, idx_prefix = stack.pop()
-        if depth == k:
-            probs[idx_prefix] = np.exp(logp)
-            continue
+        num_paths = 1 << k
+        probs = np.zeros(num_paths, dtype=np.float64)
 
-        p = get_next_token_distribution(model, np.array(hist_tuple, dtype=np.int64), platt_params=platt_params)
-        p0, p1 = float(p[0]), float(p[1])
+        initial_hist_tuple = tuple(int(x) for x in hist_arr.tolist())
+        stack = [(initial_hist_tuple, 0, 0.0, 0)]
 
-        # Append 0 (left child)
-        stack.append((hist_tuple + (0,), depth + 1, logp + np.log(max(1e-12, p0)), (idx_prefix << 1) | 0))
-        # Append 1 (right child)
-        stack.append((hist_tuple + (1,), depth + 1, logp + np.log(max(1e-12, p1)), (idx_prefix << 1) | 1))
+        while stack:
+            hist_tuple, depth, logp, idx_prefix = stack.pop()
+            if depth == k:
+                probs[idx_prefix] = np.exp(logp)
+                continue
 
-    s = probs.sum()
-    if not np.isfinite(s) or s <= 0:
-        return np.full(num_paths, 1.0 / num_paths, dtype=np.float64)
-    return probs / s
+            p = get_next_token_distribution(model, np.array(hist_tuple, dtype=np.int64), platt_params=platt_params)
+            p0, p1 = float(p[0]), float(p[1])
+
+            stack.append((hist_tuple + (0,), depth + 1, logp + np.log(max(1e-12, p0)), (idx_prefix << 1) | 0))
+            stack.append((hist_tuple + (1,), depth + 1, logp + np.log(max(1e-12, p1)), (idx_prefix << 1) | 1))
+
+        s = probs.sum()
+        if not np.isfinite(s) or s <= 0:
+            return np.full(num_paths, 1.0 / num_paths, dtype=np.float64)
+        return probs / s
+
+    is_single = False
+    if isinstance(history, np.ndarray) and history.ndim == 2:
+        histories = [history[i] for i in range(history.shape[0])]
+    elif isinstance(history, (list, tuple)) and (len(history) == 0 or isinstance(history[0], (list, tuple, np.ndarray))):
+        histories = list(history)
+    else:
+        histories = [history]
+        is_single = True
+
+    if len(histories) == 0:
+        return np.empty((0, 1 << max(k, 0)), dtype=np.float64)
+
+    results = [_single_kstep(_ensure_array(h)) for h in histories]
+    stacked = np.stack(results, axis=0)
+    return stacked[0] if is_single else stacked
 
 
 def js_divergence_k(model, h1: np.ndarray, h2: np.ndarray, k: int, platt_params: Optional[dict] = None) -> float:

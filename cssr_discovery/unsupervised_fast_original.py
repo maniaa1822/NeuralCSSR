@@ -11,7 +11,7 @@ python cssr_discovery/unsupervised_fast_original.py --preset seven_state_human_c
   --stage_a_threshold 0.001 --n_samples 100 --L 5
 
 # Even process with backward stability (should find length-1 suffixes)
-python cssr_discovery/unsupervised_fast_original.py --preset even_process \
+python csr_discovery/unsupervised_fast_original.py --preset even_process \
   --backward_stability --tolerance_bits 1e-3 --min_suffix_len 1 \
   --stage_a_threshold 0.001 --n_samples 100 --L 5
 
@@ -172,7 +172,8 @@ def find_minimal_suffix_per_history(history: np.ndarray, model, platt_params: Op
     Find the shortest suffix of history that preserves emission distribution.
 
     Backward stability test: Start with full history, try progressively shorter suffixes
-    until emission changes beyond tolerance.
+    until emission changes beyond tolerance. Uses a single batched model call to evaluate
+    all candidate suffixes for efficiency.
 
     Args:
         history: The full history context
@@ -182,37 +183,43 @@ def find_minimal_suffix_per_history(history: np.ndarray, model, platt_params: Op
         Lmin: Minimum suffix length to consider
 
     Returns:
-        (minimal_suffix, minimal_length, js_to_full): Shortest stable suffix
+        (minimal_suffix, minimal_length, js_to_full, minimal_probs): Shortest stable suffix
     """
     if len(history) <= Lmin:
-        return history, len(history), 0.0
+        minimal_probs = get_next_token_distribution(model, history, platt_params)
+        return history, len(history), 0.0, minimal_probs
 
-    # Get emission distribution for full history
-    full_probs = get_next_token_distribution(model, history, platt_params)
+    # Build list of candidate suffixes (full history down to Lmin)
+    lengths = list(range(len(history), Lmin - 1, -1))
+    suffixes = [history[-L:] if L < len(history) else history for L in lengths]
 
-    # Test progressively shorter suffixes (backward stability)
-    for suffix_len in range(len(history) - 1, Lmin - 1, -1):
-        suffix = history[-suffix_len:]
-        suffix_probs = get_next_token_distribution(model, suffix, platt_params)
+    # Batch evaluate emissions for all candidates
+    probs_batch = get_next_token_distribution(model, suffixes, platt_params)
+    prob_by_len = {lengths[i]: probs_batch[i] for i in range(len(lengths))}
 
-        # Check if suffix preserves emission within tolerance
+    full_len = lengths[0]
+    full_probs = prob_by_len[full_len]
+
+    # Scan shorter suffixes from len-1 down to Lmin
+    for idx in range(1, len(lengths)):
+        suffix_len = lengths[idx]
+        suffix_probs = prob_by_len[suffix_len]
         js_div = js_bits(full_probs, suffix_probs)
         if js_div <= tolerance_bits:
-            # This suffix is stable - can drop earlier tokens
             continue
-        else:
-            # Suffix too short - need one more token
-            minimal_suffix = history[-(suffix_len + 1):]
-            minimal_len = suffix_len + 1
-            minimal_probs = get_next_token_distribution(model, minimal_suffix, platt_params)
-            js_to_full = js_bits(full_probs, minimal_probs)
-            return minimal_suffix, minimal_len, js_to_full
 
-    # If we get here, even Lmin suffix is stable
+        # Current suffix is too short; use previous (longer) suffix as minimal
+        minimal_len = lengths[idx - 1]
+        minimal_suffix = history[-minimal_len:]
+        minimal_probs = prob_by_len[minimal_len]
+        js_to_full = js_bits(full_probs, minimal_probs)
+        return minimal_suffix, minimal_len, js_to_full, minimal_probs
+
+    # All suffixes within tolerance → fall back to Lmin
     minimal_suffix = history[-Lmin:]
-    minimal_probs = get_next_token_distribution(model, minimal_suffix, platt_params)
+    minimal_probs = prob_by_len[Lmin]
     js_to_full = js_bits(full_probs, minimal_probs)
-    return minimal_suffix, Lmin, js_to_full
+    return minimal_suffix, Lmin, js_to_full, minimal_probs
 
 
 def backward_stability_refinement_per_bucket(bucket_histories: List[np.ndarray],
@@ -241,15 +248,12 @@ def backward_stability_refinement_per_bucket(bucket_histories: List[np.ndarray],
     refined_contexts = []
 
     for hist in bucket_histories:
-        minimal_suffix, minimal_len, js_to_full = find_minimal_suffix_per_history(
+        minimal_suffix, minimal_len, js_to_full, minimal_probs = find_minimal_suffix_per_history(
             hist, model, platt_params, tolerance_bits, Lmin
         )
 
         hist_key = ''.join(map(str, hist))
         minimal_key = ''.join(map(str, minimal_suffix))
-
-        # Get emission probabilities for the minimal suffix
-        minimal_probs = get_next_token_distribution(model, minimal_suffix, platt_params)
 
         refined_contexts.append({
             "original": hist,
@@ -893,7 +897,7 @@ def main():
     parser.add_argument('--L', type=int, default=5, help='History length')
     parser.add_argument('--k_refine', type=int, default=4, help='k for conditional JS in Stage B')
     parser.add_argument('--n_samples', type=int, default=50, help='Number of histories to sample')
-    parser.add_argument('--sampling_strategy', type=str, choices=['random', 'emission_stratified'],
+    parser.add_argument('--sampling_strategy', type=str, choices=['random', 'emission_stratified', 'exhaustive'],
                        default='emission_stratified', help='History sampling strategy')
     parser.add_argument('--stage_a_threshold', type=float, default=0.001, help='Stage A JS threshold')
     parser.add_argument('--stage_b_threshold', type=float, default=0.001,
@@ -906,8 +910,10 @@ def main():
     parser.add_argument('--output_json', type=str, help='Save results to JSON')
 
     # Backward stability options
-    parser.add_argument('--backward_stability', action='store_true',
-                       help='Apply backward stability test to find minimal suffixes within Stage A buckets')
+    parser.add_argument('--backward_stability', dest='backward_stability', action='store_true', default=True,
+                       help='Enable backward stability test to find minimal suffixes within Stage A buckets (default: on)')
+    parser.add_argument('--disable_backward_stability', dest='backward_stability', action='store_false',
+                       help='Disable backward stability refinement')
     parser.add_argument('--tolerance_bits', type=float, default=1e-3,
                        help='JS divergence tolerance in bits for backward stability test')
     parser.add_argument('--min_suffix_len', type=int, default=2,
@@ -958,7 +964,7 @@ def main():
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
 
-    from transcssr_neural_runner import _load_nano_gpt_model, load_binary_string
+    from transcssr_baseline.transcssr_neural_runner import _load_nano_gpt_model, load_binary_string
 
     print(f"Fast Unsupervised Epsilon Machine Discovery")
     print(f"Model: {model_ckpt}")
@@ -985,6 +991,14 @@ def main():
     elif args.sampling_strategy == 'emission_stratified':
         sampled_histories = emission_stratified_sampling(data, args.L, model, args.n_samples,
                                                        platt, n_strata=5, seed=args.seed)
+    elif args.sampling_strategy == 'exhaustive':
+        # Generate all possible binary sequences of length L
+        sampled_histories = []
+        for i in range(2**args.L):
+            binary_str = format(i, f'0{args.L}b')
+            history = np.array([int(c) for c in binary_str], dtype=np.int64)
+            sampled_histories.append(history)
+        print(f"Generated all {len(sampled_histories)} possible length-{args.L} histories")
     print(f"Sampled {len(sampled_histories)} histories")
 
     # Run efficient clustering

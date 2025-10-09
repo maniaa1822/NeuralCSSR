@@ -1,0 +1,35 @@
+# Cursor Rules for NeuralCSSR Project
+
+## Environment Management
+ALWAYS use `uv` for package management and running Python scripts:
+- Use `uv sync` to install dependencies
+- Use `uv run python script.py` for all Python script execution
+- Never use `pip` directly for this project
+- Use `uv run --with torch --with numpy python script.py` when specific packages are needed
+
+## Command Formatting
+ALWAYS provide example commands in a format that can be directly copied and run:
+- Use complete, executable command examples
+- Include all necessary flags and parameters
+- Show the exact terminal output format
+- Use proper bash syntax with `#` for comments
+- Ensure commands work from the project root directory unless otherwise specified
+
+## Code Style
+- Follow PEP 8 style guidelines for Python code
+- Use descriptive variable names and function names
+- Include docstrings for all public functions and classes
+- Use type hints where appropriate
+- Keep functions focused and single-purpose
+
+## Documentation
+- Update CURSOR.md when adding new machines or workflows
+- Include usage examples for all new functions
+- Document any breaking changes or new dependencies
+- Keep command examples up-to-date and runnable
+
+## Testing
+- Include basic validation of generated datasets
+- Verify model training achieves expected loss levels
+- Check that discovery algorithms produce reasonable state counts
+- Test new machines with the full pipeline before committing
