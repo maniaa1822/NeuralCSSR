@@ -13,10 +13,20 @@ from typing import List, Optional, Sequence
 
 def extract_subsequences(data: np.ndarray, L: int) -> List[np.ndarray]:
     """Extract all length-L subsequences from dataset."""
-    subsequences = []
-    for i in range(len(data) - L + 1):
-        subsequences.append(data[i:i+L])
-    return subsequences
+    if len(data) < L:
+        return []
+    try:
+        # Use a stride view to avoid Python loops; produces views into the
+        # original array so we only materialize a list, not copies.
+        from numpy.lib.stride_tricks import sliding_window_view
+        view = sliding_window_view(data, window_shape=L)
+        return [row for row in view]
+    except Exception:
+        # Fallback to the simple loop if sliding_window_view is unavailable.
+        subsequences = []
+        for i in range(len(data) - L + 1):
+            subsequences.append(data[i:i+L])
+        return subsequences
 
 
 def js_divergence(p: np.ndarray, q: np.ndarray) -> float:
@@ -27,7 +37,8 @@ def js_divergence(p: np.ndarray, q: np.ndarray) -> float:
 
 def get_next_token_distribution(model,
                                 history: Sequence[np.ndarray] | np.ndarray,
-                                platt_params: Optional[dict] = None) -> np.ndarray:
+                                platt_params: Optional[dict] = None,
+                                batch_size: Optional[int] = None) -> np.ndarray:
     """Get P(x|history) from the transformer, supporting batched inputs."""
 
     def _ensure_array(h) -> np.ndarray:
@@ -85,27 +96,35 @@ def get_next_token_distribution(model,
         ordered_results: dict[int, np.ndarray] = {}
 
         for length, items in buckets.items():
-            arr_batch = np.vstack([item[1][-ctx_val:] if ctx_val is not None and len(item[1]) > ctx_val else item[1]
-                                   for item in items]).astype(np.int64, copy=False)
-            x = torch.from_numpy(arr_batch)
-            if model_device is not None:
-                x = x.to(model_device)
-            out = model(x)
-            logits = out[0] if isinstance(out, (tuple, list)) else out
-            if logits.dim() == 3:
-                logits = logits[:, -1, :]
-            probs = torch.softmax(logits, dim=-1).detach().cpu().numpy()
-            if probs.shape[-1] < 2:
-                probs = np.tile(np.array([[0.5, 0.5]], dtype=np.float64), (probs.shape[0], 1))
-            # Apply Platt per row and store in original order
-            for (idx, _), p in zip(items, probs):
-                p0, p1 = float(p[0]), float(p[1])
-                s = p0 + p1
-                if s <= 0:
-                    base = np.array([0.5, 0.5], dtype=np.float64)
-                else:
-                    base = np.array([p0 / s, p1 / s], dtype=np.float64)
-                ordered_results[idx] = _apply_platt(base)
+            # Chunk within each length bucket to avoid oversized GPU batches
+            start = 0
+            while start < len(items):
+                end = len(items) if not batch_size else min(len(items), start + int(batch_size))
+                sub = items[start:end]
+                arr_batch = np.vstack([
+                    item[1][-ctx_val:] if ctx_val is not None and len(item[1]) > ctx_val else item[1]
+                    for item in sub
+                ]).astype(np.int64, copy=False)
+                x = torch.from_numpy(arr_batch)
+                if model_device is not None:
+                    x = x.to(model_device)
+                out = model(x)
+                logits = out[0] if isinstance(out, (tuple, list)) else out
+                if logits.dim() == 3:
+                    logits = logits[:, -1, :]
+                probs = torch.softmax(logits, dim=-1).detach().cpu().numpy()
+                if probs.shape[-1] < 2:
+                    probs = np.tile(np.array([[0.5, 0.5]], dtype=np.float64), (probs.shape[0], 1))
+                # Apply Platt per row and store in original order
+                for (idx, _), p in zip(sub, probs):
+                    p0, p1 = float(p[0]), float(p[1])
+                    s = p0 + p1
+                    if s <= 0:
+                        base = np.array([0.5, 0.5], dtype=np.float64)
+                    else:
+                        base = np.array([p0 / s, p1 / s], dtype=np.float64)
+                    ordered_results[idx] = _apply_platt(base)
+                start = end
 
     outputs = [ordered_results[i] for i in range(len(histories))]
     result = np.stack(outputs, axis=0)

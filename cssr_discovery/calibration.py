@@ -15,7 +15,13 @@ from typing import Dict, Tuple, Optional
 from js_metrics import extract_subsequences, js_divergence, get_next_token_distribution
 
 
-def fit_platt_params(data: np.ndarray, model, L_max: int = 4, min_count: int = 5) -> Optional[Dict[str, float]]:
+def fit_platt_params(
+    data: np.ndarray,
+    model,
+    L_max: int = 4,
+    min_count: int = 5,
+    sample_size: Optional[int] = None,
+) -> Optional[Dict[str, float]]:
     """Fit Platt calibration parameters a,b using empirical next-token targets.
 
     We collect histories up to length L_max, compute model p1 and empirical p1,
@@ -39,6 +45,9 @@ def fit_platt_params(data: np.ndarray, model, L_max: int = 4, min_count: int = 5
     histories = [h for h, c in counts.items() if c >= min_count]
     if not histories:
         return None
+
+    if sample_size is not None and len(histories) > sample_size:
+        histories = list(np.random.choice(histories, size=sample_size, replace=False))
 
     margins = []
     targets = []

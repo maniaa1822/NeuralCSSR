@@ -1,0 +1,102 @@
+{
+  "alphabet": [
+    "0",
+    "1"
+  ],
+  "states": [
+    "aaa",
+    "aaab",
+    "ba",
+    "baa",
+    "baab",
+    "bab",
+    "bb"
+  ],
+  "start_state": "bb",
+  "transitions": {
+    "BB|0": [
+      {
+        "to_state": "BA",
+        "probability": 1.0
+      }
+    ],
+    "BB|1": [
+      {
+        "to_state": "BB",
+        "probability": 1.0
+      }
+    ],
+    "AAA|0": [
+      {
+        "to_state": "AAA",
+        "probability": 1.0
+      }
+    ],
+    "AAA|1": [
+      {
+        "to_state": "AAAB",
+        "probability": 1.0
+      }
+    ],
+    "AAAB|0": [
+      {
+        "to_state": "BA",
+        "probability": 1.0
+      }
+    ],
+    "AAAB|1": [
+      {
+        "to_state": "BB",
+        "probability": 1.0
+      }
+    ],
+    "BA|0": [
+      {
+        "to_state": "BAA",
+        "probability": 1.0
+      }
+    ],
+    "BA|1": [
+      {
+        "to_state": "BAB",
+        "probability": 1.0
+      }
+    ],
+    "BAB|0": [
+      {
+        "to_state": "BA",
+        "probability": 1.0
+      }
+    ],
+    "BAB|1": [
+      {
+        "to_state": "BB",
+        "probability": 1.0
+      }
+    ],
+    "BAAB|0": [
+      {
+        "to_state": "BA",
+        "probability": 1.0
+      }
+    ],
+    "BAAB|1": [
+      {
+        "to_state": "BB",
+        "probability": 1.0
+      }
+    ],
+    "BAA|0": [
+      {
+        "to_state": "AAA",
+        "probability": 1.0
+      }
+    ],
+    "BAA|1": [
+      {
+        "to_state": "BAAB",
+        "probability": 1.0
+      }
+    ]
+  }
+}
