@@ -1,0 +1,37 @@
+{
+  "sequence_length": 100000,
+  "num_states": 5,
+  "alphabet_size": 8,
+  "machine_name": "butterfly",
+  "display_name": "Butterfly Process",
+  "generation_seed": null,
+  "state_mapping": {
+    "name_to_index": {
+      "A": 0,
+      "B": 1,
+      "C": 2,
+      "D": 3,
+      "E": 4
+    },
+    "index_to_name": {
+      "0": "A",
+      "1": "B",
+      "2": "C",
+      "3": "D",
+      "4": "E"
+    }
+  },
+  "state_index_to_char": {
+    "0": "A",
+    "1": "B",
+    "2": "C",
+    "3": "D",
+    "4": "E"
+  },
+  "files": {
+    "sequence": "butterfly.dat",
+    "states": "butterfly.states",
+    "states_dat": "butterfly.states.dat",
+    "machine": "butterfly.machine.json"
+  }
+}

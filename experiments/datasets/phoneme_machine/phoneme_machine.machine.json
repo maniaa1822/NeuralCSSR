@@ -1,0 +1,313 @@
+{
+  "alphabet": [
+    "a",
+    "e",
+    "i",
+    "p",
+    "t",
+    "k",
+    "f",
+    "s",
+    "h",
+    "m",
+    "n",
+    "\u014b"
+  ],
+  "states": [
+    "CC",
+    "CV",
+    "VC",
+    "VV"
+  ],
+  "start_state": "CV",
+  "transitions": {
+    "VV|a": [
+      {
+        "to_state": "VV",
+        "probability": 1.0
+      }
+    ],
+    "VV|e": [
+      {
+        "to_state": "VV",
+        "probability": 1.0
+      }
+    ],
+    "VV|i": [
+      {
+        "to_state": "VV",
+        "probability": 1.0
+      }
+    ],
+    "VV|p": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|t": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|k": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|f": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|s": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|h": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|m": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|n": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VV|\u014b": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "VC|a": [
+      {
+        "to_state": "CV",
+        "probability": 1.0
+      }
+    ],
+    "VC|e": [
+      {
+        "to_state": "CV",
+        "probability": 1.0
+      }
+    ],
+    "VC|i": [
+      {
+        "to_state": "CV",
+        "probability": 1.0
+      }
+    ],
+    "VC|p": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|t": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|k": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|f": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|s": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|h": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|m": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|n": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "VC|\u014b": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CV|a": [
+      {
+        "to_state": "VV",
+        "probability": 1.0
+      }
+    ],
+    "CV|e": [
+      {
+        "to_state": "VV",
+        "probability": 1.0
+      }
+    ],
+    "CV|i": [
+      {
+        "to_state": "VV",
+        "probability": 1.0
+      }
+    ],
+    "CV|p": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|t": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|k": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|f": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|s": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|h": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|m": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|n": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CV|\u014b": [
+      {
+        "to_state": "VC",
+        "probability": 1.0
+      }
+    ],
+    "CC|a": [
+      {
+        "to_state": "CV",
+        "probability": 1.0
+      }
+    ],
+    "CC|e": [
+      {
+        "to_state": "CV",
+        "probability": 1.0
+      }
+    ],
+    "CC|i": [
+      {
+        "to_state": "CV",
+        "probability": 1.0
+      }
+    ],
+    "CC|p": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|t": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|k": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|f": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|s": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|h": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|m": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|n": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ],
+    "CC|\u014b": [
+      {
+        "to_state": "CC",
+        "probability": 1.0
+      }
+    ]
+  }
+}

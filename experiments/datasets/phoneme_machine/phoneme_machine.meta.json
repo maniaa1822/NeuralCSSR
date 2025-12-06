@@ -1,0 +1,35 @@
+{
+  "sequence_length": 100000,
+  "num_states": 4,
+  "alphabet_size": 12,
+  "machine_name": "phoneme_machine",
+  "display_name": "Phoneme Machine",
+  "generation_seed": 42,
+  "state_mapping": {
+    "name_to_index": {
+      "CC": 0,
+      "CV": 1,
+      "VC": 2,
+      "VV": 3
+    },
+    "index_to_name": {
+      "0": "CC",
+      "1": "CV",
+      "2": "VC",
+      "3": "VV"
+    }
+  },
+  "state_index_to_char": {
+    "0": "A",
+    "1": "B",
+    "2": "C",
+    "3": "D"
+  },
+  "files": {
+    "sequence": "phoneme_machine.dat",
+    "states": "phoneme_machine.states",
+    "states_dat": "phoneme_machine.states.dat",
+    "machine": "phoneme_machine.machine.json"
+  },
+  "seed": 42
+}

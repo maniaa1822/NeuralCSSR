@@ -1,0 +1,31 @@
+{
+  "alphabet": [
+    "0",
+    "1"
+  ],
+  "states": [
+    "A",
+    "B"
+  ],
+  "start_state": "A",
+  "transitions": {
+    "A|0": [
+      {
+        "to_state": "B",
+        "probability": 1.0
+      }
+    ],
+    "A|1": [
+      {
+        "to_state": "A",
+        "probability": 1.0
+      }
+    ],
+    "B|1": [
+      {
+        "to_state": "A",
+        "probability": 1.0
+      }
+    ]
+  }
+}

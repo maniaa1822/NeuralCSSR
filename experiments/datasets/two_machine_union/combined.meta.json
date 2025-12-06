@@ -1,0 +1,100 @@
+{
+  "length": 200,
+  "mode": "union",
+  "machines": [
+    "golden_mean",
+    "even_process"
+  ],
+  "segments": [
+    {
+      "machine": "golden_mean",
+      "start": 0,
+      "end": 120,
+      "length": 120,
+      "seed": 33158374
+    },
+    {
+      "machine": "even_process",
+      "start": 120,
+      "end": 200,
+      "length": 80,
+      "seed": 1465339467
+    }
+  ],
+  "machine_counts": {
+    "golden_mean": 120,
+    "even_process": 80
+  },
+  "machine_stats": {
+    "golden_mean": {
+      "count": 120,
+      "fraction": 0.6,
+      "entropy_nats": 0.462099001755515,
+      "entropy_bits": 0.6666679382324219,
+      "num_states": 2,
+      "memory_type": "finite",
+      "memory_length": 1
+    },
+    "even_process": {
+      "count": 80,
+      "fraction": 0.4,
+      "entropy_nats": 0.462099001755515,
+      "entropy_bits": 0.6666679382324219,
+      "num_states": 2,
+      "memory_type": "infinite",
+      "memory_length": null
+    }
+  },
+  "expected_optimal_loss": {
+    "nats": 0.462099001755515,
+    "bits": 0.6666679382324219
+  },
+  "joint_state_stats": {
+    "golden_mean:A": {
+      "machine": "golden_mean",
+      "state": "A",
+      "count": 78,
+      "fraction": 0.39,
+      "state_entropy_nats": 0.6931471805599453,
+      "state_entropy_bits": 1.0,
+      "num_states": 2
+    },
+    "golden_mean:B": {
+      "machine": "golden_mean",
+      "state": "B",
+      "count": 42,
+      "fraction": 0.21,
+      "state_entropy_nats": 0.0,
+      "state_entropy_bits": 0.0,
+      "num_states": 2
+    },
+    "even_process:E": {
+      "machine": "even_process",
+      "state": "E",
+      "count": 53,
+      "fraction": 0.265,
+      "state_entropy_nats": 0.6931471805599453,
+      "state_entropy_bits": 1.0,
+      "num_states": 2
+    },
+    "even_process:O": {
+      "machine": "even_process",
+      "state": "O",
+      "count": 27,
+      "fraction": 0.135,
+      "state_entropy_nats": 0.0,
+      "state_entropy_bits": 0.0,
+      "num_states": 2
+    }
+  },
+  "expected_belief_loss": {
+    "nats": 0.45401140326676415,
+    "bits": 0.655
+  },
+  "seed": 123,
+  "mixed_name": "two_machine_union",
+  "union_lengths": {
+    "golden_mean": 120,
+    "even_process": 80
+  }
+}

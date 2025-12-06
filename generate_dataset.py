@@ -18,6 +18,12 @@ from machines import (
     list_machines,
     save_dataset,
 )
+from mixed_machine_regimes.mixed_dataset import (
+    generate_switching_dataset,
+    generate_union_dataset,
+    resolve_machines,
+    save_mixed_dataset,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,6 +55,33 @@ def build_parser() -> argparse.ArgumentParser:
         "--list",
         action="store_true",
         help="List available machines and exit.",
+    )
+    parser.add_argument(
+        "--mixed_name",
+        help="Name for a mixed-machine dataset (enables mixed-generation mode).",
+    )
+    parser.add_argument(
+        "--mixed_mode",
+        choices=("union", "switch"),
+        default="union",
+        help="Mixed dataset mode: 'union' concatenates per-machine sequences, 'switch' simulates regime switching.",
+    )
+    parser.add_argument(
+        "--machines",
+        nargs="+",
+        help="Machines to include in mixed mode.",
+    )
+    parser.add_argument(
+        "--segment_lengths",
+        nargs="+",
+        type=int,
+        help="Per-machine segment lengths for union mode (same order as --machines).",
+    )
+    parser.add_argument(
+        "--switch_interval",
+        type=int,
+        default=50,
+        help="Number of symbols before switching machines in switch mode.",
     )
     return parser
 
@@ -96,9 +129,49 @@ def main() -> None:
         return
 
     if not args.machine:
-        parser.error("--machine is required unless --list is provided.")
+        if not args.mixed_name:
+            parser.error("--machine is required unless --list or --mixed_name is provided.")
+        handle_mixed_mode(args, parser)
+        return
+
+    if args.mixed_name:
+        parser.error("--machine cannot be combined with --mixed_name. Pick one mode.")
 
     generate_dataset(args.machine, args.length, args.output, args.seed)
+
+
+def handle_mixed_mode(args, parser: argparse.ArgumentParser) -> None:
+    if not args.machines or len(args.machines) < 2:
+        parser.error("--mixed_name requires --machines with at least two entries.")
+    machines = resolve_machines(args.machines)
+    metadata = {"seed": args.seed, "mixed_name": args.mixed_name}
+
+    if args.mixed_mode == "union":
+        if not args.segment_lengths or len(args.segment_lengths) != len(machines):
+            parser.error("--segment_lengths must match --machines for union mode.")
+        specs = list(zip(machines, args.segment_lengths))
+        result = generate_union_dataset(specs, seed=args.seed)
+    else:
+        if args.length is None:
+            parser.error("--length is required in switch mode.")
+        result = generate_switching_dataset(
+            machines,
+            total_length=args.length,
+            switch_interval=args.switch_interval,
+            seed=args.seed,
+        )
+    paths = save_mixed_dataset(
+        result,
+        output_dir=args.output,
+        dataset_name=args.mixed_name,
+        metadata=metadata,
+    )
+    print(f"Mixed dataset '{args.mixed_name}' ({result.mode}) length={result.length}")
+    print(f"  Machines: {', '.join(result.machines)}")
+    for seg in result.segments:
+        print(f"  Segment {seg.machine}: [{seg.start}, {seg.end}) len={seg.length}")
+    for key, path in paths.items():
+        print(f"  {key:10}: {path}")
 
 
 if __name__ == "__main__":

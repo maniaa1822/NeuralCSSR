@@ -19,7 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 import time
 from pathlib import Path
@@ -104,6 +104,33 @@ class TwoStageResult:
     stage_one: StageOneResult
     stage_two: StageTwoResult
     history_counts: Dict[HistoryKey, int]
+
+
+def build_suffix_lookup(result: TwoStageResult) -> Tuple[List[int], Dict[int, Dict[Tuple[int, ...], int]]]:
+    """Construct lookup tables that map minimal suffixes to discovered state ids."""
+    suffix_lookup: Dict[int, Dict[Tuple[int, ...], int]] = defaultdict(dict)
+    lengths: List[int] = []
+    for state_idx, suffixes in enumerate(result.stage_two.minimal_suffixes):
+        for length, suffix in suffixes:
+            if suffix not in suffix_lookup[length]:
+                suffix_lookup[length][suffix] = state_idx
+                lengths.append(length)
+    lengths = sorted(set(lengths), reverse=True)
+    return lengths, suffix_lookup
+
+
+def resolve_state_from_context(
+    context: np.ndarray, lengths: Sequence[int], suffix_lookup: Dict[int, Dict[Tuple[int, ...], int]]
+) -> Optional[int]:
+    """Resolve a context to a discovered state id using synchronizing suffixes."""
+    for length in lengths:
+        if len(context) < length:
+            continue
+        key = tuple(int(x) for x in context[-length:].tolist())
+        state = suffix_lookup[length].get(key)
+        if state is not None:
+            return state
+    return None
 
 
 def history_to_key(hist: History) -> HistoryKey:
@@ -780,8 +807,6 @@ def compute_epsilon_machine_loss(
 
     t0 = time.perf_counter()
     state_emissions: Dict[int, np.ndarray] = {}
-    suffix_lookup: Dict[int, Dict[Tuple[int, ...], int]] = defaultdict(dict)
-    lengths: List[int] = []
     for i, cluster in enumerate(clusters):
         if not cluster:
             continue
@@ -789,24 +814,7 @@ def compute_epsilon_machine_loss(
         probs = get_next_token_distribution(model, repr_hist, platt_params, batch_size=pred_batch_size)
         state_emissions[i] = probs
         print(f"State {i}: P(0)={probs[0]:.4f}, P(1)={probs[1]:.4f} (from {len(cluster)} histories)")
-
-        for length, suffix in result.stage_two.minimal_suffixes[i]:
-            if suffix not in suffix_lookup[length]:
-                suffix_lookup[length][suffix] = i
-                lengths.append(length)
-
-    lengths = sorted(set(lengths), reverse=True)
-
-    def get_state_from_context(history: np.ndarray) -> Optional[int]:
-        """Map a context to discovered state using minimal synchronizing suffixes."""
-        for length in lengths:
-            if len(history) < length:
-                continue
-            key = tuple(int(x) for x in history[-length:].tolist())
-            state = suffix_lookup[length].get(key)
-            if state is not None:
-                return state
-        return None
+    lengths, suffix_lookup = build_suffix_lookup(result)
 
     total_loss = 0.0
     num_predictions = 0
@@ -815,7 +823,7 @@ def compute_epsilon_machine_loss(
     for i in range(L, len(data)):
         context = data[i - L : i]
         next_symbol = int(data[i])
-        state = get_state_from_context(context)
+        state = resolve_state_from_context(context, lengths, suffix_lookup)
         if state is None or state not in state_emissions:
             continue
         emission_probs = state_emissions[state]
@@ -843,12 +851,95 @@ def compute_epsilon_machine_loss(
     }, time.perf_counter() - t0
 
 
+def evaluate_against_state_labels(
+    result: TwoStageResult,
+    state_labels: Sequence[str],
+    data: np.ndarray,
+    L: int,
+) -> Dict[str, object]:
+    """Evaluate discovered states against provided ground-truth state labels."""
+    if len(state_labels) != len(data):
+        print(
+            f"Warning: state label length {len(state_labels)} != data length {len(data)}; truncating to shortest."
+        )
+    usable_len = min(len(state_labels), len(data))
+    total_positions = max(0, usable_len - L)
+    lengths, suffix_lookup = build_suffix_lookup(result)
+    per_state: Dict[int, Counter] = defaultdict(Counter)
+
+    matched_positions = 0
+    for i in range(L, usable_len):
+        context = data[i - L : i]
+        state = resolve_state_from_context(context, lengths, suffix_lookup)
+        if state is None:
+            continue
+        matched_positions += 1
+        per_state[state][state_labels[i]] += 1
+
+    alignment_entries: List[Dict[str, object]] = []
+    for state_idx in sorted(per_state.keys()):
+        counts = per_state[state_idx]
+        total_assignments = sum(counts.values())
+        machine_counter: Counter = Counter()
+        for label, count in counts.items():
+            machine_name = label.split(":", 1)[0]
+            machine_counter[machine_name] += count
+        alignment_entries.append(
+            {
+                "state": state_idx,
+                "assignments": total_assignments,
+                "top_ground_truth": [
+                    {"label": label, "count": count} for label, count in counts.most_common(5)
+                ],
+                "machine_distribution": [
+                    {"machine": machine, "count": count} for machine, count in machine_counter.most_common()
+                ],
+            }
+        )
+
+    coverage = (matched_positions / total_positions) if total_positions > 0 else 0.0
+    print(
+        f"State alignment coverage: matched {matched_positions} / {total_positions} positions ({coverage:.2%})."
+    )
+    return {
+        "positions_evaluated": total_positions,
+        "positions_with_state": matched_positions,
+        "coverage_ratio": coverage,
+        "state_alignment": alignment_entries,
+    }
+
+
+def summarize_metadata(meta: Dict[str, object], source_path: Path) -> Dict[str, object]:
+    """Summarize dataset metadata for result JSON."""
+    summary: Dict[str, object] = {"metadata_path": str(source_path)}
+    for key in (
+        "mode",
+        "mixed_name",
+        "machines",
+        "machine_counts",
+        "union_lengths",
+        "switch_interval",
+        "expected_optimal_loss",
+        "expected_belief_loss",
+    ):
+        if key in meta:
+            summary[key] = meta[key]
+    if "segments" in meta:
+        summary["segment_count"] = len(meta["segments"])
+        summary["segments_preview"] = meta["segments"][:5]
+    if "belief_machine" in meta:
+        summary["belief_machine"] = meta["belief_machine"]
+    return summary
+
+
 def save_result_json(
     path: Path,
     result: TwoStageResult,
     args,
     loss_stats: Optional[Dict[str, float]] = None,
     timings: Optional[Dict[str, float]] = None,
+    metadata_summary: Optional[Dict[str, object]] = None,
+    state_alignment: Optional[Dict[str, object]] = None,
 ) -> None:
     payload = {
         "preset": args.preset,
@@ -868,6 +959,10 @@ def save_result_json(
         payload["loss"] = loss_stats
     if timings is not None:
         payload["timings_sec"] = timings
+    if metadata_summary is not None:
+        payload["dataset_metadata"] = metadata_summary
+    if state_alignment is not None:
+        payload["state_alignment"] = state_alignment
     path.write_text(json.dumps(payload, indent=2))
     print(f"Saved results to {path}")
 
@@ -962,6 +1057,16 @@ def parse_args() -> argparse.Namespace:
         help="Compute epsilon-machine negative log-likelihood on the dataset.",
     )
     parser.add_argument(
+        "--state_ids_dat",
+        type=str,
+        help="Optional path to .state_ids.dat (or equivalent) for ground-truth state evaluation.",
+    )
+    parser.add_argument(
+        "--metadata_json",
+        type=str,
+        help="Optional path to dataset metadata JSON (e.g., mixed regime metadata).",
+    )
+    parser.add_argument(
         "--output_json",
         type=str,
         help="Optional path to save JSON summary.",
@@ -1030,6 +1135,32 @@ def main() -> None:
 
     dataset_str = load_binary_string(data_path)
     data = np.array([int(c) for c in dataset_str], dtype=np.int64)
+    metadata_summary: Optional[Dict[str, object]] = None
+    metadata_path = Path(args.metadata_json) if args.metadata_json else data_path.with_suffix(".meta.json")
+    if metadata_path.exists():
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            metadata_summary = summarize_metadata(metadata, metadata_path)
+            print(f"Loaded dataset metadata from {metadata_path}")
+        except Exception as exc:
+            print(f"Warning: failed to parse metadata at {metadata_path}: {exc}")
+    elif args.metadata_json:
+        print(f"Warning: metadata JSON {metadata_path} not found.")
+
+    state_labels: Optional[List[str]] = None
+    state_ids_path: Optional[Path] = None
+    if args.state_ids_dat:
+        state_ids_path = Path(args.state_ids_dat)
+    else:
+        candidate = data_path.with_suffix(".state_ids.dat")
+        if candidate.exists():
+            state_ids_path = candidate
+    if state_ids_path:
+        if state_ids_path.exists():
+            print(f"Loading ground-truth state labels from {state_ids_path}")
+            state_labels = state_ids_path.read_text().split()
+        else:
+            print(f"Warning: state ids file {state_ids_path} not found.")
     if args.L_max > block_size:
         print(f"Warning: L_max={args.L_max} exceeds model block size {block_size}. Contexts will be truncated.")
 
@@ -1079,8 +1210,21 @@ def main() -> None:
         )
         timing_summary["compute_loss"] = t_loss
 
+    state_alignment_summary: Optional[Dict[str, object]] = None
+    if state_labels is not None:
+        print("\n=== Evaluating discovered states vs. provided labels ===")
+        state_alignment_summary = evaluate_against_state_labels(result, state_labels, data, args.L_max)
+
     if args.output_json:
-        save_result_json(Path(args.output_json), result, args, loss_stats, timing_summary)
+        save_result_json(
+            Path(args.output_json),
+            result,
+            args,
+            loss_stats,
+            timing_summary,
+            metadata_summary=metadata_summary,
+            state_alignment=state_alignment_summary,
+        )
 
     elapsed = time.perf_counter() - t_start
     timing_summary["total_runtime"] = elapsed

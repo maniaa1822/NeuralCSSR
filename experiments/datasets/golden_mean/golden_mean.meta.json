@@ -1,0 +1,29 @@
+{
+  "sequence_length": 50000,
+  "num_states": 2,
+  "alphabet_size": 2,
+  "machine_name": "golden_mean",
+  "display_name": "Golden Mean",
+  "generation_seed": 42,
+  "state_mapping": {
+    "name_to_index": {
+      "A": 0,
+      "B": 1
+    },
+    "index_to_name": {
+      "0": "A",
+      "1": "B"
+    }
+  },
+  "state_index_to_char": {
+    "0": "A",
+    "1": "B"
+  },
+  "files": {
+    "sequence": "golden_mean.dat",
+    "states": "golden_mean.states",
+    "states_dat": "golden_mean.states.dat",
+    "machine": "golden_mean.machine.json"
+  },
+  "seed": 42
+}

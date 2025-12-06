@@ -83,6 +83,8 @@ def list_machines() -> List[str]:
 from . import seven_state_human
 from . import golden_mean
 from . import even_process
+from . import phoneme_machine
+from . import butterfly_machine
 
 
 __all__ = [

@@ -1,0 +1,280 @@
+{
+  "length": 100000,
+  "mode": "union",
+  "machines": [
+    "golden_mean",
+    "seven_state_human"
+  ],
+  "segments": [
+    {
+      "machine": "golden_mean",
+      "start": 0,
+      "end": 50000,
+      "length": 50000,
+      "seed": 191664963
+    },
+    {
+      "machine": "seven_state_human",
+      "start": 50000,
+      "end": 100000,
+      "length": 50000,
+      "seed": 1662057957
+    }
+  ],
+  "machine_counts": {
+    "golden_mean": 50000,
+    "seven_state_human": 50000
+  },
+  "machine_stats": {
+    "golden_mean": {
+      "count": 50000,
+      "fraction": 0.5,
+      "entropy_nats": 0.462099001755515,
+      "entropy_bits": 0.6666679382324219,
+      "num_states": 2,
+      "memory_type": "finite",
+      "memory_length": 1
+    },
+    "seven_state_human": {
+      "count": 50000,
+      "fraction": 0.5,
+      "entropy_nats": 0.5374066811465465,
+      "entropy_bits": 0.7753139538307191,
+      "num_states": 7,
+      "memory_type": "finite",
+      "memory_length": 4
+    }
+  },
+  "expected_optimal_loss": {
+    "nats": 0.49975284145103077,
+    "bits": 0.7209909460315705
+  },
+  "joint_state_stats": {
+    "golden_mean:A": {
+      "machine": "golden_mean",
+      "state": "A",
+      "count": 33492,
+      "fraction": 0.33492,
+      "state_entropy_nats": 0.6931471805599453,
+      "state_entropy_bits": 1.0,
+      "num_states": 2
+    },
+    "golden_mean:B": {
+      "machine": "golden_mean",
+      "state": "B",
+      "count": 16508,
+      "fraction": 0.16508,
+      "state_entropy_nats": 0.0,
+      "state_entropy_bits": 0.0,
+      "num_states": 2
+    },
+    "seven_state_human:bb": {
+      "machine": "seven_state_human",
+      "state": "bb",
+      "count": 9434,
+      "fraction": 0.09434,
+      "state_entropy_nats": 0.2337916587064593,
+      "state_entropy_bits": 0.3372900666170139,
+      "num_states": 7
+    },
+    "seven_state_human:ba": {
+      "machine": "seven_state_human",
+      "state": "ba",
+      "count": 13655,
+      "fraction": 0.13655,
+      "state_entropy_nats": 0.6853142072764582,
+      "state_entropy_bits": 0.9886994082884974,
+      "num_states": 7
+    },
+    "seven_state_human:bab": {
+      "machine": "seven_state_human",
+      "state": "bab",
+      "count": 5873,
+      "fraction": 0.05873,
+      "state_entropy_nats": 0.5623351446188083,
+      "state_entropy_bits": 0.8112781244591328,
+      "num_states": 7
+    },
+    "seven_state_human:baa": {
+      "machine": "seven_state_human",
+      "state": "baa",
+      "count": 7781,
+      "fraction": 0.07781,
+      "state_entropy_nats": 0.6853142072764582,
+      "state_entropy_bits": 0.9886994082884974,
+      "num_states": 7
+    },
+    "seven_state_human:aaa": {
+      "machine": "seven_state_human",
+      "state": "aaa",
+      "count": 5476,
+      "fraction": 0.05476,
+      "state_entropy_nats": 0.48257756517701206,
+      "state_entropy_bits": 0.6962122601251458,
+      "num_states": 7
+    },
+    "seven_state_human:aaab": {
+      "machine": "seven_state_human",
+      "state": "aaab",
+      "count": 4450,
+      "fraction": 0.0445,
+      "state_entropy_nats": 0.48257756517701206,
+      "state_entropy_bits": 0.6962122601251458,
+      "num_states": 7
+    },
+    "seven_state_human:baab": {
+      "machine": "seven_state_human",
+      "state": "baab",
+      "count": 3331,
+      "fraction": 0.03331,
+      "state_entropy_nats": 0.5623351446188083,
+      "state_entropy_bits": 0.8112781244591328,
+      "num_states": 7
+    }
+  },
+  "expected_belief_loss": {
+    "nats": 0.5007666880974712,
+    "bits": 0.722453617560612
+  },
+  "belief_machine": {
+    "alphabet": [
+      "0",
+      "1"
+    ],
+    "states": [
+      {
+        "id": "golden_mean:A",
+        "machine": "golden_mean",
+        "state": "A"
+      },
+      {
+        "id": "golden_mean:B",
+        "machine": "golden_mean",
+        "state": "B"
+      },
+      {
+        "id": "seven_state_human:bb",
+        "machine": "seven_state_human",
+        "state": "bb"
+      },
+      {
+        "id": "seven_state_human:aaa",
+        "machine": "seven_state_human",
+        "state": "aaa"
+      },
+      {
+        "id": "seven_state_human:aaab",
+        "machine": "seven_state_human",
+        "state": "aaab"
+      },
+      {
+        "id": "seven_state_human:ba",
+        "machine": "seven_state_human",
+        "state": "ba"
+      },
+      {
+        "id": "seven_state_human:bab",
+        "machine": "seven_state_human",
+        "state": "bab"
+      },
+      {
+        "id": "seven_state_human:baab",
+        "machine": "seven_state_human",
+        "state": "baab"
+      },
+      {
+        "id": "seven_state_human:baa",
+        "machine": "seven_state_human",
+        "state": "baa"
+      }
+    ],
+    "transitions": {
+      "golden_mean:A": {
+        "0": "golden_mean:B",
+        "1": "golden_mean:A"
+      },
+      "golden_mean:B": {
+        "1": "golden_mean:A"
+      },
+      "seven_state_human:bb": {
+        "0": "seven_state_human:ba",
+        "1": "seven_state_human:bb"
+      },
+      "seven_state_human:aaa": {
+        "0": "seven_state_human:aaa",
+        "1": "seven_state_human:aaab"
+      },
+      "seven_state_human:aaab": {
+        "0": "seven_state_human:ba",
+        "1": "seven_state_human:bb"
+      },
+      "seven_state_human:ba": {
+        "0": "seven_state_human:baa",
+        "1": "seven_state_human:bab"
+      },
+      "seven_state_human:bab": {
+        "0": "seven_state_human:ba",
+        "1": "seven_state_human:bb"
+      },
+      "seven_state_human:baab": {
+        "0": "seven_state_human:ba",
+        "1": "seven_state_human:bb"
+      },
+      "seven_state_human:baa": {
+        "0": "seven_state_human:aaa",
+        "1": "seven_state_human:baab"
+      }
+    },
+    "emissions": {
+      "golden_mean:A": {
+        "0": 0.5,
+        "1": 0.5
+      },
+      "golden_mean:B": {
+        "0": 0.0,
+        "1": 1.0
+      },
+      "seven_state_human:bb": {
+        "0": 0.9375,
+        "1": 0.0625
+      },
+      "seven_state_human:aaa": {
+        "0": 0.1875,
+        "1": 0.8125
+      },
+      "seven_state_human:aaab": {
+        "0": 0.1875,
+        "1": 0.8125
+      },
+      "seven_state_human:ba": {
+        "0": 0.5625,
+        "1": 0.4375
+      },
+      "seven_state_human:bab": {
+        "0": 0.25,
+        "1": 0.75
+      },
+      "seven_state_human:baab": {
+        "0": 0.75,
+        "1": 0.25
+      },
+      "seven_state_human:baa": {
+        "0": 0.5625,
+        "1": 0.4375
+      }
+    }
+  },
+  "markov_baseline": {
+    "L": 8,
+    "avg_loss_per_symbol": 0.5315502187715769,
+    "avg_loss_per_symbol_bits": 0.7668648646051976,
+    "num_predictions": 99992,
+    "num_unique_histories": 248
+  },
+  "seed": 42,
+  "mixed_name": "gm_seven_union",
+  "union_lengths": {
+    "golden_mean": 50000,
+    "seven_state_human": 50000
+  }
+}

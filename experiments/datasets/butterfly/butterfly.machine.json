@@ -1,0 +1,82 @@
+{
+  "alphabet": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+  ],
+  "states": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E"
+  ],
+  "start_state": "A",
+  "transitions": {
+    "A|2": [
+      {
+        "to_state": "B",
+        "probability": 1.0
+      }
+    ],
+    "A|3": [
+      {
+        "to_state": "D",
+        "probability": 1.0
+      }
+    ],
+    "B|4": [
+      {
+        "to_state": "B",
+        "probability": 1.0
+      }
+    ],
+    "B|0": [
+      {
+        "to_state": "C",
+        "probability": 1.0
+      }
+    ],
+    "C|6": [
+      {
+        "to_state": "C",
+        "probability": 1.0
+      }
+    ],
+    "C|1": [
+      {
+        "to_state": "A",
+        "probability": 1.0
+      }
+    ],
+    "D|5": [
+      {
+        "to_state": "D",
+        "probability": 1.0
+      }
+    ],
+    "D|0": [
+      {
+        "to_state": "E",
+        "probability": 1.0
+      }
+    ],
+    "E|7": [
+      {
+        "to_state": "E",
+        "probability": 1.0
+      }
+    ],
+    "E|1": [
+      {
+        "to_state": "A",
+        "probability": 1.0
+      }
+    ]
+  }
+}

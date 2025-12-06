@@ -1,0 +1,139 @@
+{
+  "length": 240,
+  "mode": "switch",
+  "machines": [
+    "golden_mean",
+    "even_process"
+  ],
+  "segments": [
+    {
+      "machine": "golden_mean",
+      "start": 0,
+      "end": 30,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "even_process",
+      "start": 30,
+      "end": 60,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "golden_mean",
+      "start": 60,
+      "end": 90,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "even_process",
+      "start": 90,
+      "end": 120,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "golden_mean",
+      "start": 120,
+      "end": 150,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "even_process",
+      "start": 150,
+      "end": 180,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "golden_mean",
+      "start": 180,
+      "end": 210,
+      "length": 30,
+      "seed": null
+    },
+    {
+      "machine": "even_process",
+      "start": 210,
+      "end": 240,
+      "length": 30,
+      "seed": null
+    }
+  ],
+  "machine_counts": {
+    "golden_mean": 120,
+    "even_process": 120
+  },
+  "machine_stats": {
+    "golden_mean": {
+      "count": 120,
+      "fraction": 0.5,
+      "entropy_nats": 0.462099001755515,
+      "entropy_bits": 0.6666679382324219,
+      "num_states": 2,
+      "memory_type": "finite",
+      "memory_length": 1
+    },
+    "even_process": {
+      "count": 120,
+      "fraction": 0.5,
+      "entropy_nats": 0.462099001755515,
+      "entropy_bits": 0.6666679382324219,
+      "num_states": 2,
+      "memory_type": "infinite",
+      "memory_length": null
+    }
+  },
+  "expected_optimal_loss": {
+    "nats": 0.462099001755515,
+    "bits": 0.6666679382324219
+  },
+  "joint_state_stats": {
+    "golden_mean:A": {
+      "machine": "golden_mean",
+      "state": "A",
+      "count": 80,
+      "fraction": 0.3333333333333333,
+      "state_entropy_nats": 0.6931471805599453,
+      "state_entropy_bits": 1.0,
+      "num_states": 2
+    },
+    "golden_mean:B": {
+      "machine": "golden_mean",
+      "state": "B",
+      "count": 40,
+      "fraction": 0.16666666666666666,
+      "state_entropy_nats": 0.0,
+      "state_entropy_bits": 0.0,
+      "num_states": 2
+    },
+    "even_process:E": {
+      "machine": "even_process",
+      "state": "E",
+      "count": 76,
+      "fraction": 0.31666666666666665,
+      "state_entropy_nats": 0.6931471805599453,
+      "state_entropy_bits": 1.0,
+      "num_states": 2
+    },
+    "even_process:O": {
+      "machine": "even_process",
+      "state": "O",
+      "count": 44,
+      "fraction": 0.18333333333333332,
+      "state_entropy_nats": 0.0,
+      "state_entropy_bits": 0.0,
+      "num_states": 2
+    }
+  },
+  "expected_belief_loss": {
+    "nats": 0.4505456673639644,
+    "bits": 0.6499999999999999
+  },
+  "seed": 321,
+  "mixed_name": "two_machine_switch",
+  "switch_interval": 30
+}
