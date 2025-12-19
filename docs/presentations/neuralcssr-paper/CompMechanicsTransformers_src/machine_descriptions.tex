@@ -1,0 +1,56 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Machine descriptions (Appendix include)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Benchmark $\epsilon$-Machines}
+\label{app:machines}
+
+We benchmark causal-state discovery on synthetic processes with known, finite-state $\epsilon$-machines. Each process defines a stationary stochastic language over a finite alphabet and is specified in the repository's \texttt{machines/} catalog. Below we summarize the machines used in our experiments.
+
+\paragraph{Rationale for selection.}
+We chose these machines to span a range of structural properties that stress causal-state discovery while remaining fully interpretable and ground-truthed: a minimal finite-memory baseline (Golden Mean), a small $\epsilon$-machine with infinite Markov order and difficult synchronization (Even), a finite-memory but cryptic process where next-step equivalence merges causal states (Butterfly), a mid-size binary machine with suffix-defined states derived from human sequence generation (Seven-State Human), and a larger-alphabet, language-like phonotactic process (Phoneme). Together they probe sensitivity to memory, crypticity, alphabet size, and state-space complexity.
+
+\subsubsection{Golden Mean Process}
+\todo{Add citation.}
+The Golden Mean process is a two-state, unifilar binary process in which the substring ``00'' is forbidden. It has finite predictive order.
+
+\textbf{Alphabet.} $\mathbf{O}=\{0,1\}$.  
+\textbf{Causal states.} Two states $A$ and $B$ correspond to whether the last emitted symbol was $1$ or $0$, respectively.  
+\textbf{Transitions and emissions.} From $A$, the process emits $0$ or $1$ with equal probability, transitioning to $B$ on $0$ and staying in $A$ on $1$. From $B$, the process must emit $1$ and return to $A$.  
+\textbf{Memory.} Finite Markov/cryptic order with memory length $L=1$.
+
+\subsubsection{Even Process}
+\todo{Add citation.}
+The Even process is a two-state sofic binary process in which runs of $1$'s have even length. It is a canonical example with infinite Markov order.
+
+\textbf{Alphabet.} $\mathbf{O}=\{0,1\}$.  
+\textbf{Causal states.} Two states $E$ (even parity) and $O$ (odd parity) track the parity of the current trailing run of $1$'s.  
+\textbf{Transitions and emissions.} From $E$, the process emits $0$ (staying in $E$) or $1$ (moving to $O$) with equal probability. From $O$, the process must emit $1$ and return to $E$, enforcing even-length runs.  
+\textbf{Memory.} Infinite predictive order: synchronization can require arbitrarily long histories.
+
+\subsubsection{Butterfly Process}
+\todo{Add citation.}
+The Butterfly process is a five-state, two-cryptic process over an eight-symbol alphabet. It exhibits crypticity and causal irreversibility while remaining unifilar.
+
+\textbf{Alphabet.} $\mathbf{O}=\{0,1,2,3,4,5,6,7\}$.  
+\textbf{Causal states.} Five states $A,B,C,D,E$.  
+\textbf{Transitions and emissions.} Each state has two outgoing transitions with probability $1/2$ each, forming a unifilar HMM; the transition structure is given in the machine catalog.  
+\textbf{Memory.} Finite predictive order with memory length $L=2$ and cryptic order $k=2$.
+
+\subsubsection{Seven-State Human Machine}
+\todo{Add citation.}
+The Seven-State Human machine is a seven-state unifilar binary process derived from empirical studies of human ``random'' sequence generation. Its states are defined by suffix patterns of length two to four.
+
+\textbf{Alphabet.} $\mathbf{O}=\{0,1\}$.  
+\textbf{Causal states.} Seven states labeled by their defining suffixes: $\{bb, aaa, aaab, ba, bab, baab, baa\}$.  
+\textbf{Transitions and emissions.} Transitions are deterministic and unifilar; each state has a distinct bias over emitting $0$ vs.\ $1$, yielding a richer predictive structure than the two-state benchmarks.  
+\textbf{Memory.} Finite predictive order with maximum suffix length $L=4$.
+
+\subsubsection{Phoneme Machine}
+\todo{Add citation.}
+The Phoneme machine is a four-state, twelve-symbol process inspired by vowel/consonant phonotactics. States are defined by the classes of the last two emitted symbols.
+
+\textbf{Alphabet.} Twelve symbols: three vowels and nine consonants.  
+\textbf{Causal states.} $\{VV, VC, CV, CC\}$ encode the vowel/consonant class of the previous two symbols.  
+\textbf{Transitions and emissions.} Transitions are deterministic given the emitted symbol class. Emission probabilities favor consonants after vowels and vowels after consonant clusters, producing syllable-like alternations.  
+\textbf{Memory.} Finite predictive order with memory length $L=2$.
